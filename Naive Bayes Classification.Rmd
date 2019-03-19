@@ -1,0 +1,304 @@
+---
+title: "Assignment-4"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+#HARSH SHAH (001273963)
+#DA5030 | 35664 | Intro Data Mining & Machine Learning | SEC 01 | Spring 2018
+#Assignment: 4 
+```
+
+
+```{r}
+
+# Problem 1
+
+# Collecting & Exploring Data
+
+# Import and read the csv file
+sms_raw <- read.csv("C:/Users/hshah/Desktop/DM-ML/Assignment 4 Naive Bayes Classification/da5030.spammsgdataset.csv", stringsAsFactors = FALSE)
+
+# To familiarize with the structure of the data, used str() function
+str(sms_raw)
+
+# Coverted the "type" feature variable from characted to factor.
+sms_raw$type <- factor(sms_raw$type)
+
+str(sms_raw$type)
+
+# Used table() function to get insights to the total number of spam/ham messages in the labelled training dataset 
+table(sms_raw$type)
+
+
+```
+
+
+```{r}
+
+# Data Preparation - Processing text data for analysis
+
+# To remove numbers, punctuations, other characters, white spaces, filler words, etc. I've used the "tm" package, which is proven to be crucial library required for the text mining, classification. 
+
+# Loading "tm" package, after prior installation.
+
+library(tm)
+
+# Collecting text documents by creating a corpus using Corpus() function.
+
+sms_corpus <- Corpus(VectorSource(sms_raw$text))
+
+print(sms_corpus)
+
+inspect(sms_corpus[1:3])
+
+# Using the tm_map() function method to transform the corpus. Also, will use the series of transformation function in order to clean corpus and save the results in a new object.
+
+corpus_clean <- tm_map(sms_corpus, tolower)
+
+corpus_clean <- tm_map(corpus_clean, removeNumbers)
+
+corpus_clean <- tm_map(corpus_clean, removeWords, stopwords())
+
+corpus_clean <- tm_map(corpus_clean, removePunctuation)
+
+corpus_clean <- tm_map(corpus_clean, stripWhitespace)
+
+
+inspect(sms_corpus[1:3])
+
+inspect(corpus_clean[1:3])
+
+# DocumentMatrix() is the function which transforms the corpus to create a datastructure called sparse matrix which indicates the rows as documents/messages and clumns to be thw words. Ech cell willl store the number of the count of the times it appeared in that particular message. 
+sms_dtm <- DocumentTermMatrix(corpus_clean)
+
+sms_dtm
+
+```
+
+```{r}
+
+# Data Preparation - Creating Training and Testing Datasets
+
+# Since the sms are ordered randomly
+
+# Spliting raw dataframe
+sms_raw_train <- sms_raw[1:4180, ]
+sms_raw_test <- sms_raw[4181:5574, ]
+
+# spliting document-term matrix
+sms_dtm_train <- sms_dtm[1:4180, ]
+sms_dtm_test <- sms_dtm[4181:5574, ]
+
+# Spliting the corpus
+sms_corpus_train <- corpus_clean[1:4180]
+sms_corpus_test <- corpus_clean[4181:5574]
+
+
+# To compare the proportion of the spam and ham in both training and testing dataset
+
+prop.table(table(sms_raw_train$type))
+
+prop.table(table(sms_raw_test$type))
+
+
+```
+
+
+```{r}
+
+# Visualizing text data - word clouds
+
+# Loaded the library "wordcloud" after prior installations.
+library(wordcloud)
+
+# Argument "min.freq = 40" is to allow only those words in a visual of words cloud which appeaed more than 40 times in a whole. And"random.order = FALSE" is to not allow a randomness in the cloud and instead will work in a form of high frequency of words will appear in center and so on.
+wordcloud(sms_corpus_train, min.freq = 40, random.order = FALSE)
+
+
+# Comparing the wordclouds for each type called spam and ham within the training and testing dataset
+spam <- subset(sms_raw_train, type == "spam")
+ham <- subset(sms_raw_train, type == "ham")
+
+
+wordcloud(spam$text, max.words = 40, random.order = FALSE, scale = c(3, 0.5))
+wordcloud(ham$text, max.words = 40, random.order = FALSE, scale = c(3, 0.5))
+
+
+```
+
+
+```{r}
+
+# Data Preparation - creating indicator feature for frequent words
+
+# "findFreqTerms()" is a package which will find the words that appeared atleast the times it specifies in the argument. In this case ots 5 times.
+findFreqTerms(sms_dtm_train, 5)
+
+# Created a function Dictionary in order to store the frequently counted terms with passed arguments.
+Dictionary <- function(x) {
+    if( is.character(x) ) {
+        return (x)
+    }
+    stop('x is not a character vector')
+}
+
+sms_dict <- Dictionary(findFreqTerms(sms_dtm_train, 5))
+
+sms_train <- DocumentTermMatrix(sms_corpus_train, list(Dictionary = sms_dict))
+
+sms_test <- DocumentTermMatrix(sms_corpus_test, list(Dictionary = sms_dict))
+
+
+```
+
+```{r}
+
+# convert the counts to factor data type
+
+convert_counts <- function(x) {
+  x <- ifelse(x > 0, 1, 0)
+  x <- factor(x, levels = c(0,1), labels = c("No", "Yes"))
+  return(x)
+}
+
+
+# Used apply() function in order to automate the conversion to all the columns of the dataset. It is usually used in order to execute the tasks with respect to the implementations to the rows and columns. It is many times being used in replace of the for loop, to increase the efficiency and performance of the task.
+# MARGIN = 2 means it will apply to only columns of the specified data.
+sms_train <- apply(sms_train, MARGIN = 2, convert_counts)
+
+sms_test <- apply(sms_test, MARGIN = 2, convert_counts)
+
+```
+
+```{r}
+
+# Step-3 Training a model on data
+
+# Loaded the library after prior installation
+library(e1071)
+
+# Building the classifier
+
+sms_classifier <- naiveBayes(sms_train, sms_raw_train$type)
+
+sms_test_pred <- predict(sms_classifier, sms_test)
+
+
+# Loaded the library after prior installation
+library(gmodels)
+
+# "Crosstable" function will provide the crosstable with actual and predicted classes which are being classified by the naiveBayes classification using "e1071" package. 
+CrossTable(sms_test_pred, sms_raw_test$type, prop.chisq = FALSE, prop.t = FALSE, dnn = c('predicted', 'actual'))
+
+# 12/1212 = 0.99%, were predicted/classified as a spam messages which actually are ham. And 16/182 = 8.79%, were predicted/classified as ham messages which actually are spam.
+
+
+```
+
+
+```{r}
+
+# Improving model performance, by passing the "laplace = 1" argument in, while building a classifier
+
+sms_classifier2 <- naiveBayes(sms_train, sms_raw_train$type, laplace = 1)
+
+sms_test_pred2 <- predict(sms_classifier2, sms_test)
+
+CrossTable(sms_test_pred2, sms_raw_test$type, prop.chisq = FALSE, prop.t = FALSE, prop.r = FALSE, dnn = c('predicted', 'actual'))
+
+# 10/1212 = 0.83%, were predicted/classified as a spam messages which actually are ham. And 23/182 = 12.64%, were predicted/classified as ham messages which actually are spam.
+
+# Hence, naiveBayes classification seems to give accurate results and proves to be standard for text classification. 
+
+```
+
+```{r}
+
+# Problem 2
+
+# Loaded the library(KlaR) after prior installation
+library(klaR)
+
+#Inbuild iris dataset is called in rstudio
+data(iris)
+
+
+nrow(iris)
+summary(iris)
+head(iris)
+
+# identify indexes to be in testing dataset and every index of 5th, 10th, 15th .. will be in the testing dataset & the rest in training dataset
+testidx <- which(1:length(iris[, 1]) %% 5 == 0)
+testidx
+
+# separating into training and testing datasets
+iristrain <- iris[-testidx,]
+iristest <- iris[testidx,]
+
+# applying Naive Bayes
+nbmodel <- NaiveBayes(Species~., data=iristrain)
+
+# checking the accuracy
+prediction <- predict(nbmodel, iristest[,-5])
+table(prediction$class, iristest[,5])
+
+```
+
+```{r}
+# Problem 2
+# Q.1 How would you make a prediction for a new case with the above package?
+
+#Answer.1
+
+# Firstly, I will identify and verify all the feature variables as an independence predictor variables. Since, "KlaR" package with NaiveBayes() function assumes the predictor variables as an independent predictor variables in order to further implement the classification of new cases with algorithmic model. 
+# Secondly, while after collecting and exploring the dataset will prepare the data in terms of by normalizing, scaling, transforming and identifying outliers along with new cases been normalized and transformed with compatibility of the whole training dataset. 
+# Thirdly, will apply NaiveBayes prediction classification and thereafter will evaluating the model and maximize the accuracy of the model, since we implemented with the test dataset within the original dataset. Hence, it will maximize the accuracy of implementation of the model with test case as of the new case with NaiveBayes() funtion of KlaR package.
+# Finally will perform implementation of prediction classification with new case by after training the NaiveBayes Classification model using KlaR package. 
+
+```
+
+```{r}
+# Problem 2
+# Q.2 How does this package deal with numeric features? 
+
+#Answer.2
+
+# NaiveBayes function of KlaR package works with both categorical and/or numeric feature variables. Since, its implementation is completely on probabilistic classification, it might have different computation style to perform with the types of feature predictor variables. 
+# Hence, for each categorical variables in a data, a table is being given for each "attribute" level while for the numric feature predictor variable, a table is being given for each "target" class which means it works with mean and standard deviation in order to execute the class density of function. 
+
+```
+
+```{r}
+#Problem 2
+# Q.3 How does it specify a Laplace estimator?
+
+# Answer.3
+
+# The KlaR package's NaiveBayes() function works quite distinctly with its function of Laplace estimator. Since, NaiveBayes() has the argument called "fL" which specify the algorithm to Laplace the correction in which default value is being to 0 i.e. no need of any coorection. But in the case of large datasets or in practice, it's preferred to use it with fL=1 so that it gives the increased accuracy of the model.
+
+```
+
+
+```{r}
+
+# Problem 3
+# Question: What are Laplace estimators and why are they used in Naive Bayes classification? Provide an example of how they might be used and when. 
+
+#Answer
+
+
+# Laplace estimator: Its function is to correct the cell with the defined value in the argument. It works and get implemented with the specified value in terms of adding up to each cell of the training dataset to ensure no cell has o value. Generally, correction are required to the cell which has no values and are being valued to 0, but it won't be good idea because it would result into bad prediction by increased error.  
+# Lapalce estimators is one of the crucial factor while implementing and training a model on NaiveBayes classification. Since, NaiveBayes classification works on the Bayes' theorm that is probabilistic classification to calculate the posterior probability. It becomes important that probability of the classification given the word do not come to zero, beacuse it will eventually impact on other correct probability classification and results into bad predictions. 
+
+# Example:
+# Lets say, I have a new case which happened to have its 3 feature variable of "free", "won", "prize". Now the new case has to be passed with the naive bayes classification function arguments. The new case has total two types in order to get classified "spam and "ham". 
+# Once, you are done getting the likelihoods(i.e calculated frequency of the words in spam/ham messages) of the your labelled training datasets of your feature varaibles. Lets assume that you have 100 messages, 40 messages are spam and rest 60 are ham. After analyzing that and calculating the frequency with its probability distribution over the whole data with that total word counts to whether its spam or ham. If, one of the feature variable of the new case appears to be o then its probability calculation also might appear to be 0. Then the whole computation happens to perform and execute it with the result of 0 which for our analysis is of no use and executes nothing. Hence, lapalce estimator comes in place there, where it estimates and adds up each of the cell with value given and correct it to the specified defined given value in the functional argument. To ensure, the probability does not results to zero.  
+# Its also being used to evaluate and improve the performance of the model. But, in general cells imputed/added by value of Laplace = 1 is best, since it do not impact significantly on the result compared to the whole training dataset ansure the results to efficient and accurate as per the classification model.
+
+
+```
+
+
