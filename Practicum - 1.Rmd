@@ -1,0 +1,1039 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+#HARSH SHAH (001273963)
+#DA5030 | 35664 | Intro Data Mining & Machine Learning | SEC 01 | Spring 2018
+#PRACTICUM: 1
+
+```
+
+```{r}
+
+
+### PROBLEM 1
+
+### (1)
+
+library(data.table)
+library(curl)
+library(class)
+library(gmodels)
+library(caret)
+library(ggplot2)
+
+# Downloaded, Imported and Read url dataset
+GI_DB <- fread('https://archive.ics.uci.edu/ml/machine-learning-databases/glass/glass.data')
+str(GI_DB)
+dim(GI_DB)
+GI_DB
+
+#Headings are being added with variable col_headings and use names() function
+col_headings <- c('ID', 'Refractive_Index', 'Sodium', 'Magnesium', 'Aluminium', 'Silicon', 
+                  'Potassium', 'Calcium', 'Barium', 'Iron', 'Glass_Type')
+names(GI_DB) <- col_headings
+
+```
+
+```{r}
+### (2)
+
+#Exploring the dataset
+summary(GI_DB)
+head(GI_DB)
+GI_DB
+str(GI_DB)
+nrow(GI_DB)
+
+table(GI_DB$Glass_Type)
+
+
+```
+
+```{r}
+### (3)
+
+
+## Histogram of Na Column its Normal Curve
+
+x <- GI_DB$Sodium
+h<-hist(x, breaks=10, col="red", xlab="Unit measurement Weights in %", 
+        main="Distribution of Weights \n Na-Sodium") 
+xfit<-seq(min(x),max(x),length=40) 
+yfit<-dnorm(xfit,mean=mean(x),sd=sd(x)) 
+yfit <- yfit*diff(h$mids[1:2])*length(x) 
+lines(xfit, yfit, col="blue", lwd=2)
+
+
+## I can easily determine from the plotted histogram and overlayed normal curve of column 
+## Sodium is not normally distributed.
+
+##Does the k-NN algorithm require normally distributed data or is it a non-parametric method?
+# K-NN Algorithm, requires the normally distributed data in order to execute the K-NN classification prediction.
+# Since, k-nn takes every numeric feature variables into the training data set and every feature variables are 
+# supposedly has different scale from smaller to larger difference in numeric values. Which will eventually impact the K-NN prediction classes. 
+# Besides, the K-NN uses the distance function, and hence we want every feature variable that we use to be in a simmilar range scale.
+# So that it doesn't influence the prediction classes and results accurate according to the implemented algorithm.
+
+```
+
+```{r}
+### (4)
+
+## Normalizing first 2 columns by min/max normalization
+
+GI_DB_norm <- GI_DB
+GI_DB_norm <- data.frame(GI_DB)
+str(GI_DB)
+str(GI_DB_norm)
+GI_DB_norm <- GI_DB_norm[-1]
+str(GI_DB_norm)
+
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x))) }
+
+RI_norm <- normalize(GI_DB_norm$Refractive_Index)
+Na_norm <- normalize(GI_DB_norm$Sodium)
+summary(RI_norm)
+GI_DB_norm$Refractive_Index <- RI_norm
+GI_DB_norm$Sodium <- Na_norm
+
+summary(GI_DB_norm$Refractive_Index)
+summary(GI_DB_norm$Sodium)
+
+str(GI_DB_norm)
+summary(GI_DB_norm)
+
+
+
+```
+
+```{r}
+### (5)
+
+## Normalizing remaining columns except last one by z-score standardization
+
+GI_DB_new <- data.frame(GI_DB)
+str(GI_DB)
+str(GI_DB_new)
+str(GI_DB_norm)
+
+Mg_norm <- ((mean(GI_DB_new$Magnesium)) - (GI_DB_new$Magnesium))/(sd(GI_DB_new$Magnesium))
+summary(Mg_norm)
+GI_DB_norm$Magnesium <- abs(Mg_norm)
+summary(GI_DB_norm$Magnesium)
+
+Al_norm <- ((mean(GI_DB_new$Aluminium)) - (GI_DB_new$Aluminium))/(sd(GI_DB_new$Aluminium))
+summary(Al_norm)
+GI_DB_norm$Aluminium <- abs(Al_norm)
+summary(GI_DB_norm$Aluminium)
+        
+Si_norm <- ((mean(GI_DB_new$Silicon)) - (GI_DB_new$Silicon))/(sd(GI_DB_new$Silicon))
+summary(Si_norm)
+GI_DB_norm$Silicon <- abs(Si_norm)
+summary(GI_DB_norm$Silicon)
+
+k_norm <- ((mean(GI_DB_new$Potassium)) - (GI_DB_new$Potassium))/(sd(GI_DB_new$Potassium))
+summary(k_norm)
+GI_DB_norm$Potassium <- abs(k_norm)
+summary(GI_DB_norm$Potassium)
+
+Ca_norm <- ((mean(GI_DB_new$Calcium)) - (GI_DB_new$Calcium))/(sd(GI_DB_new$Calcium))
+summary(Ca_norm)
+GI_DB_norm$Calcium <- abs(Ca_norm)
+summary(GI_DB_norm$Calcium)
+
+Ba_norm <- ((mean(GI_DB_new$Barium)) - (GI_DB_new$Barium))/(sd(GI_DB_new$Barium))
+summary(Ba_norm)
+GI_DB_norm$Barium <- abs(Ba_norm)
+summary(GI_DB_norm$Barium)
+
+Fe_norm <- ((mean(GI_DB_new$Iron)) - (GI_DB_new$Iron))/(sd(GI_DB_new$Iron))
+summary(Fe_norm)
+GI_DB_norm$Iron <- abs(Fe_norm)
+summary(GI_DB_norm$Iron)
+
+summary(GI_DB_norm)
+
+```
+
+```{r}
+### (6)
+
+df6 <- data.frame(GI_DB_norm)
+str(GI_DB_norm)
+
+# Mixing up the normalized dataset before spliting into training/validation dataset
+set.seed(9999)
+runif(5)
+runif_num <- runif(nrow(df6))
+runif_num
+df6 <- df6[order(runif_num), ]
+df6$Glass_Type
+df6
+str(df6)
+head(df6)
+
+
+## Train/Test Dataset
+set.seed(985)
+
+partition <- createDataPartition(y = df6$Glass_Type, p = 0.5, list = FALSE)
+
+df6_Validation <- df6[partition, ]
+
+df6_Training <- df6[-partition, ]
+
+table(df6$Glass_Type)
+table(df6_Training$Glass_Type)
+table(df6_Validation$Glass_Type)
+
+dim(df6_Validation)
+dim(df6_Training)
+
+```
+
+```{r}
+### (7)
+
+##Normalizing the new cases; as same as i did in for the original data
+
+#New_Case1 <- c(1.51621, 12.53, 3.48, 1.39, 73.39, 0.60, 8.55, 0.00, 0.05)
+#New_Case2 <- c(1.5098, 12.77, 1.85, 1.81, 72.69, 0.59, 10.01, 0.00, 0.01)
+
+
+df7 <- data.frame(GI_DB)
+str(df7)
+df7 <- df7[-1]
+
+df71 <- data.frame(df7)
+dim(df71)
+str(df71)
+
+df72 <- data.frame(df71)
+
+df72[nrow(df72) + 1,1:9] = list(Refractive_Index=1.51621,Sodium=12.53, Magnesium=3.48, Aliminium=1.39, Silicon=73.39, Potassium=0.60, Calcium=8.55, Barium=0.00, Iron=0.05)
+
+df72[nrow(df72) + 1,1:9] = list(Refractive_Index=1.5098,Sodium=12.77, Magnesium=1.85, Aliminium=1.81, Silicon=72.69, Potassium=0.59, Calcium=10.01, Barium=0.00, Iron=0.01)
+
+nrow(df72)
+str(df72)
+
+## Normalizing the new cases by fitting it into the original normalized dataframe, to normalize it again. 
+
+## Now, For first two columns
+
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x))) }
+
+RI_norm_nw <- normalize(df72$Refractive_Index)
+Na_norm_nw <- normalize(df72$Sodium)
+summary(RI_norm_nw)
+df72$Refractive_Index <- RI_norm_nw
+df72$Sodium <- Na_norm_nw
+
+summary(df72$Refractive_Index)
+summary(df72$Sodium)
+
+str(df72)
+summary(df72)
+
+## For remaining columns except last one, since its class column
+
+
+str(df71)
+str(df72)
+
+Mg_norm_nw <- ((mean(df72$Magnesium)) - (df72$Magnesium))/(sd(df72$Magnesium))
+summary(Mg_norm_nw)
+df72$Magnesium <- abs(Mg_norm_nw)
+
+
+Al_norm_nw <- ((mean(df72$Aluminium)) - (df72$Aluminium))/(sd(df72$Aluminium))
+summary(Al_norm_nw)
+df72$Aluminium <- abs(Al_norm_nw)
+
+        
+Si_norm_nw <- ((mean(df72$Silicon)) - (df72$Silicon))/(sd(df72$Silicon))
+summary(Si_norm_nw)
+df72$Silicon <- abs(Si_norm_nw)
+
+k_norm_nw <- ((mean(df72$Potassium)) - (df72$Potassium))/(sd(df72$Potassium))
+summary(k_norm_nw)
+df72$Potassium <- abs(k_norm_nw)
+
+Ca_norm_nw <- ((mean(df72$Calcium)) - (df72$Calcium))/(sd(df72$Calcium))
+summary(Ca_norm_nw)
+df72$Calcium <- abs(Ca_norm_nw)
+
+Ba_norm_nw <- ((mean(df72$Barium)) - (df72$Barium))/(sd(df72$Barium))
+summary(Ba_norm_nw)
+df72$Barium <- abs(Ba_norm_nw)
+
+Fe_norm_nw <- ((mean(df72$Iron)) - (df72$Iron))/(sd(df72$Iron))
+summary(Fe_norm_nw)
+df72$Iron <- abs(Fe_norm_nw)
+
+summary(df72)
+
+
+
+
+
+# dist - calculates the Euclidean distance between
+# two vectors of equal size containing numeric elements
+dist <- function(p,q)
+{
+  d <- 0
+  for (i in 1:length(p)) {
+    d <- d + (p[i] - q[i])^2
+  }
+  dist <- sqrt(d)
+}
+
+
+## Normailized value of new cases
+cs1 <- c(0.26564443, 0.27067669, 0.55336549, 0.113233817, 0.951960797, 0.15716876, 2.889834e-01, 0.35022350, 0.0696556)
+cs2 <- c(0.00000000, 0.30676692, 0.58028353, 0.730855904, 0.045902176, 0.14176565, 7.401956e-01, 0.35022350, 0.4818641)
+mean(df72$Magnesium) 
+mean(GI_DB$Magnesium)
+
+
+
+str(GI_DB_norm)
+
+neighbors <- function(GI_DB_norm, cs1)
+{
+  m <- nrow(GI_DB_norm)
+  ds <- numeric(m)
+  for (i in 1:m) {
+    p <- GI_DB_norm[i,c(1:9)]
+    q <- cs1[c(1:9)]
+    ds[i] <- dist(p,q) 
+  }
+  neighbors <- ds
+}
+ 
+
+n1 <- neighbors(GI_DB_norm, cs1)
+n1
+
+k.closest <- function(neighbors, k)
+{
+  ordered.neighbors <- order(neighbors)
+  k.closest <- ordered.neighbors[1:k]
+}
+n1
+f <- k.closest(n1, 10)
+f
+
+Mode <- function(x) 
+{
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+
+# knn - finds the most likely class that an unknown object u
+# belongs to based on a training data frame of features and
+# a provided k
+knn_7 <- function (GI_DB_norm, cs1, k)
+{
+  nb <- neighbors(GI_DB_norm, cs1)
+  f <- k.closest(nb,k)
+  knn_7 <- Mode(GI_DB_norm$Glass_Type[f])
+}
+nn <- knn_7(GI_DB_norm, cs1, 10)
+nn ## Class for the respective features of variables of New_Case1
+
+
+## For cs2, classification
+
+neighbors.1 <- function(GI_DB_norm, cs2)
+{
+  m <- nrow(GI_DB_norm)
+  ds <- numeric(m)
+  for (i in 1:m) {
+    p <- GI_DB_norm[i,c(1:9)]
+    q <- cs2[c(1:9)]
+    ds[i] <- dist(p,q) 
+  }
+  neighbors <- ds
+}
+ 
+
+n2 <- neighbors.1(GI_DB_norm, cs2)
+n2
+
+k.closest.1 <- function(neighbors.1, k)
+{
+  ordered.neighbors <- order(neighbors.1)
+  k.closest <- ordered.neighbors[1:k]
+}
+n2
+f2 <- k.closest.1(n2, 10)
+f2
+
+Mode <- function(x) 
+{
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+
+# knn - finds the most likely class that an unknown object u
+# belongs to based on a training data frame of features and
+# a provided k
+knn_8 <- function (GI_DB_norm, cs2, k)
+{
+  nb <- neighbors.1(GI_DB_norm, cs2)
+  f <- k.closest.1(nb,k)
+  knn_8 <- Mode(GI_DB_norm$Glass_Type[f])
+}
+nn1 <- knn_8(GI_DB_norm, cs2, 10)
+nn1 ## Class for the respective features of variables of New_Case2
+
+
+
+```
+
+```{r}
+### (8)
+
+## Implementing the same method of classification using "class" package
+set.seed(963)
+
+RI_newcs <- c(0.2656444,0.00000000)
+Na_newcs <- c(0.2706767,0.30676692)
+Mg_newcs <- c(0.5533655,0.58028353)
+Al_newcs <- c(0.1132338,0.73085590)
+Si_newcs <- c(0.9519608,0.04590218)
+k_newcs <- c(0.1571688,0.14176565)
+ca_newcs <- c(0.2889834,0.74019560)
+Ba_newcs <- c(0.3502235,0.35022350)
+Fe_newcs <- c(0.0696556,0.48186410)
+
+GI_DB_norm_nwcases <- data.frame(RI_newcs, Na_newcs, Mg_newcs, Al_newcs, Si_newcs, k_newcs, ca_newcs, Ba_newcs, Fe_newcs)
+str(GI_DB_norm_nwcases)
+
+
+df8 <- as.data.frame(df6)
+str(df8)
+
+
+ck_train <- df8[, 1:9]
+dim(ck_train)
+ck_test <- GI_DB_norm_nwcases[,1:9]
+dim(ck_test)
+ck_target <- df8[,10]
+table(ck_target)
+str(df8)
+df6
+
+library(class)
+v9 <- knn(train = ck_train, test = ck_test, cl=ck_target, k=14)
+v9 # Class for the new cases
+
+#Observed, the classification results into the same using either of the method
+# i.e. New_case1: "1" and New_case2: "2"
+
+
+
+```
+
+```{r}
+
+### (9)
+
+## KNN implementations using class package against validation dataset
+
+df9Train <- as.data.frame(df6_Training)
+df9Test <- as.data.frame(df6_Validation)
+gi_db_train1 <- df9Train[,1:9]
+dim(gi_db_train1)
+gi_db_test1 <- df9Test[,1:9]
+dim(gi_db_test1)
+gi_db_target1 <- df9Train[,10]
+table(gi_db_target1)
+
+gi_db_test_target <- df9Test$Glass_Type
+
+o9 <- knn(train = gi_db_train1, test = gi_db_test1, cl=gi_db_target1, k=14)
+o9 # Classifications for validation dataset
+
+library(class)
+CrossTable(x = gi_db_test_target, y = o9, prop.chisq = FALSE)
+
+library(caret)
+confusionMatrix(o9, gi_db_test_target) 
+
+
+
+```
+
+```{r}
+### (10)
+
+Mode <- function(x) 
+{
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+
+
+dist <- function(p,q)
+{
+  d <- 0
+  for (i in 1:length(p)) {
+    d <- d + (p[i] - q[i])^2
+  }
+  dist <- sqrt(d)
+}
+
+
+nearest <- function (df10_train, df10_validation)
+{
+   m <- nrow(df10_train)
+   ds <- numeric(m)
+   q <- as.numeric(df10_validation[c(1,2,3,4,5,6,7,8,9)])
+   for (i in 1:m) {
+     p <- df10_train[i,c(1,2,3,4,5,6,7,8,9)]
+     ds[i] <- dist(p,q)
+   }
+   nearest <- ds
+}
+
+
+k.closest.10 <- function(nearest,k)
+{
+  ordered.neighbors.10 <- order(nearest)
+  k.closest.10 <- ordered.neighbors.10[1:k]
+}
+
+
+knn_10 <- function (df10_train, df10_validation, k)
+{
+  nb <- nearest(df10_train,df10_validation)
+  f <- k.closest.10(nearest,k)
+  knn_10 <- Mode(df10_train$GlassType[f])
+}
+
+
+# Looping multiple value of k and calculating euclidean distance over the for loop with each row of validation dataset with each row of train dataset
+
+ab <- vector()
+k <- c(5,6,7,8,9,10,11,12,13,14)
+optimal_k <- as.numeric(length(k))
+vec <- 1
+for(j in 5:14) {
+  for ( i in 1:nrow(df10_validation)) {
+    ab[i] <- knn_10(df10_train,df10_validation[i,1:9],j)
+  }
+  x <- table(ab, df10_validation[,10])
+  optimal_k[vec] <- (sum(diag(x))/sum(x)) *100
+  vec <- vec + 1
+}
+
+which.max(ab)
+
+# Accuracy of k=5 is maximum and hence it is the optimal k.
+
+```
+
+```{r}
+
+### (11)
+
+# Creating a plotting of k vs incorrect classification (error rate)
+
+library(ggplot2)
+
+df18 <- data.frame(k, (100-optimal_k))
+colnames(df18) <- "optimal_k"
+ggplot(df18, aes(x=k, y=optimal_k)) + geom_line()
+
+```
+
+```{r}
+
+### (12)
+
+# KNN classification using "class" package and k=7 (accuracy respondance was good than other values of k)
+
+df12Train <- data.frame(df6_Training)
+df12Test <- data.frame(df6_Validation)
+Traindata <- df12Train[ , 1:9]
+dim(Traindata)
+TestData <- df12Test[ , 1:9]
+dim(TestData)
+Train_Target <- df12Train[, 10]
+table(Train_Target)
+
+Test_Target <- df12Test$Glass_Type
+Test_Target
+
+library(class)
+
+Pred1 <- knn(train = Traindata, test = TestData, cl=Train_Target, k=7)
+Pred1
+
+library(gmodels)
+CrossTable(x = Test_Target, y = Pred1, prop.chisq = FALSE)
+
+
+library(caret)
+confusionMatrix(Pred1, Test_Target)
+
+
+
+
+```
+
+```{r}
+
+### (13)
+
+# Run-time complexity in a K-NN algorithm actually works and runs based on the capacity of the training dataset, its features variables; which classification based chosen neighbors with value of k. 
+
+# Assuming that m is large comparatively than the case we considered of m=9, it could eventually take more running time to run the classification algorithm of K-NN but then it also impacts with the changes in the capacity of the training dataset and value of k (how many number of neighbors need to take in consideration)
+
+# As long as run time of the K-NN classification algorithm is concerned, there are variables internally like number of cases in a training dataset, number of feature variables and number of cases in a whole dataset. If in a algorithm w, n, and m increases the algorithm would eventually be behaving as such taking more time as compared to the values with lower values. 
+
+# I believe, it would be taking more runtime comparatively and be running fast if the training dataset cases and number of features varibles are large.
+
+
+
+```
+
+```{r}
+
+### PROBLEM 2
+
+# Dataset = 21613 rows and 21 Variables
+
+kc_house_data <- read.csv("C:/Users/hshah/Desktop/DM-ML/Practicum 1/kc_house_data.csv")
+str(kc_house_data)
+nrow(kc_house_data)
+dim(kc_house_data)
+summary(kc_house_data)
+
+```
+
+```{r}
+
+# Converted to numeric form before spliting up in training and testing dataset
+
+df2 <- data.frame(kc_house_data[, c(3:12)])
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x))) }
+
+str(df2)
+df2$bedrooms <- as.numeric(df2$bedrooms)
+df2$sqft_living <- as.numeric(df2$sqft_living)
+df2$sqft_lot <- as.numeric(df2$sqft_lot)
+df2$waterfront <- as.numeric(df2$waterfront)
+df2$view <- as.numeric(df2$view)
+df2$condition <- as.numeric(df2$condition)
+df2$grade <- as.numeric(df2$grade)
+
+str(df2)
+summary(df2)
+
+
+
+
+## 75% of the sample size
+smp_size <- floor(0.75*nrow(df2))
+
+## set the seed to make your partition reproductible
+set.seed(1236)
+train_ind <- sample(seq_len(nrow(df2)), size = smp_size)
+
+train.2 <- df2[train_ind, ]
+test.2 <- df2[-train_ind, ]
+
+dim(train.2)
+dim(test.2)
+
+```
+
+```{r}
+# Using the class package, made a forecasting model with 75%/25% train/test data
+
+TrainingData <- train.2[ , 2:10]
+dim(TrainingData)
+TestingData <- test.2[ , 2:10]
+dim(TestingData)
+Training_Target <- train.2[, 1]
+table(Training_Target)
+str(Training_Target)
+Testing_Target <- test.2$price
+str(Testing_Target)
+
+library(class)
+v1 <- knn(train = TrainingData, test = TestingData, cl=Training_Target, k=147)
+v1
+
+```
+
+
+```{r}
+
+## knn using "class" package with one last row as test case and rest daatset as training dataset, in order to evaluate the forecasting model with accurtate value of k 
+
+## For last1 case and evaluating the model accuracy with and by changing the value of k and its stability.
+
+train.3 <- data.frame(df2[1:21612, ])
+test.3 <- data.frame(df2[21613, ]) 
+#dont apply since trying for knn.reg()
+
+TrainingData.1 <- train.3[, 2:10]
+str(TrainingData.1)
+TestingData.1 <- test.3[, 2:10]
+str(TestingData.1)
+Training_Target.1 <- train.3[,1]
+Testing_Target.1 <- test.3$price
+
+set.seed(9110)  
+library(class)
+v2.1 <- knn(train = TrainingData.1, test = TestingData.1, cl=Training_Target.1, k=147)
+v2.2 <- knn(train = TrainingData.1, test = TestingData.1, cl=Training_Target.1, k=150)
+v2.3 <- knn(train = TrainingData.1, test = TestingData.1, cl=Training_Target.1, k=155)
+v2.4 <- knn(train = TrainingData.1, test = TestingData.1, cl=Training_Target.1, k=167)
+v2.5 <- knn(train = TrainingData.1, test = TestingData.1, cl=Training_Target.1, k=187)
+v2.6 <- knn(train = TrainingData.1, test = TestingData.1, cl=Training_Target.1, k=198)
+
+v2.1
+v2.2
+v2.3
+v2.4
+v2.5
+v2.6
+
+#Using FNN package, forecasted the value of last case and resulted the same value. Either of the package can be used in order to forecat the value (sales price in this case) of the next time period with specific accurate value of k 
+
+library(FNN)
+knn.reg(TrainingData.1, test = TestingData.1, Training_Target.1, k = 147, algorithm=c("kd_tree", "cover_tree", "brute"))
+
+knn.reg(TrainingData.1, test = TestingData.1, Training_Target.1, k = 198, algorithm=c("kd_tree", "cover_tree", "brute"))
+
+# The value of k=198 seems more reasonable comparatively in terms of the forecast of the sales price for home. Since the forecast for sales price for home with ID= 21613 with k=198 is $368238 which is quite near prediction than the actual sales price of home i.e. $325000
+```
+
+```{r}
+
+## knn using my own algorithm
+
+
+# dist - calculates the Euclidean distance between
+# two vectors of equal size containing numeric elements
+dist <- function(p,q)
+{
+  d <- 0
+  for (i in 1:length(p)) {
+    d <- d + (p[i] - q[i])^2
+  }
+  dist <- sqrt(d)
+}
+
+
+# neighbors - returns a vector of distances between an object u
+# and a set data frame of features
+neighbors.0 <- function (TrainingData.1, TestingData.1)
+{
+   c <- nrow(TrainingData.1)
+   ds.2 <- numeric(c)
+   q <- as.numeric(TestingData.1)
+   for (i in 1:c) {
+     p <- TrainingData.1[i,]
+     ds.2[i] <- dist(p,q)
+   }
+   neighbors.0 <- ds.2
+}
+
+
+# k.closest - finds the smallest k values in a vector of values
+k.closest.0 <- function(neighbors.0,k)
+{
+  ordered.neighbors <- order(neighbors.0)
+  k.closest.0 <- ordered.neighbors[1:k]
+}
+
+
+# knn - finds the most likely class that an unknown object u
+# belongs to based on a training data frame of features and
+# a provided k
+knn.0 <- function (TrainingData.1, TestingData.1, k)
+{
+  nb <- neighbors.0(TrainingData.1,TestingData.1)
+  f <- k.closest.0(nb,k)
+  knn.0 <- mean(train.3$price[f])
+}
+
+nu <- knn.0(TrainingData.1, TestingData.1, 198)
+nu
+
+# k=7 is very small value, though it gives accurate value of the actual forecase.This value of k in comparision to the size of the dataset of 21613 rows and it is proved to be always using atleast square root of the total cases of the dataset to ignore the overfit and underfot of the implementing model. 
+library(FNN)
+knn.reg(TrainingData.1, test = TestingData.1, Training_Target.1, k = 7, algorithm=c("kd_tree", "cover_tree", "brute"))
+
+
+
+
+# Hence build a forecast model using "class" and "fnn" package and also tried implementing my own KNN algorithm to ensure the precision of the values getting from the rstudio. 
+# KNN is strongest algorith which could be utilized to forecast prefect classification and regression by working with the categorical and continuous feature variable. Predicting the values as per the fitted value of k i.e. evaluated by various techniques that I actually ised in this problem. Uses mode and mean as a part of statistics for nearest neighbors of k in concern to the categorical and continuous variable respectively.
+
+```
+
+
+```{r}
+# Predicting sales price for hom with my own determined feature variables using my own completely evaluated forecasting model for KNN-algorithm
+
+# Defined new features after evaluating the already built forecasting model using class, fnn package and implementing own algorithm with different values of k, in order to forecast and advice the home sellers that how much their home is worth with clean and qualitative dataset with highly refined requirements.
+
+bedrooms.1 <- c(3.00)
+bathrooms.1 <- c(2.00)
+sqft_living.1 <- c(1550.00)
+sqft_lot.1 <- c(4550.00)
+floors.1 <- c(1.00)
+waterfront.1 <- c(1.00)
+view.1 <- c(2.00)
+condition.1 <- c(5.00)
+grade.1 <- c(10.00)
+
+
+test.df1 <- data.frame(bedrooms.1, bathrooms.1, sqft_living.1, sqft_lot.1, floors.1, waterfront.1, view.1, condition.1, grade.1)
+test.df1
+
+train.df1 <- df2[,]
+ 
+
+
+TrainingData.2 <- train.df1[, 2:10]
+str(TrainingData.2)
+TestingData.2 <- test.df1
+str(TestingData.2)
+Training_Target.2 <- train.df1[,1]
+# Testing_Target.2 <- test.df$price , no use.
+
+library(class)
+ft_price_pred <- knn(train = TrainingData.2, test = TestingData.2, cl = Training_Target.2, k=147)
+
+library(FNN)
+ft_price_prediction <- knn.reg(TrainingData.2, test = TestingData.2, Training_Target.2, k = 147, algorithm=c("kd_tree", "cover_tree", "brute"))  
+  
+ft_price_prediction #Sales price for home with new determined feature variables using my own knn implementation algorithm and "class" package with stable, accurate value of k (after complete evaluation of the model with different techniques sed in the problem)
+  
+
+
+```
+
+
+```{r}
+
+### PROBLEM 3
+
+# Implemented forecasting of the next period using each time series methods i.e simple moving average, weighed moving average, exponential smoothing and linear regression trend line series equation with 95% prediction interval.
+
+# Carried out Mean Square Error in order to decide and evaluate that how and which model to use to stay precise and accurate on a forecast of the next time period series. The model with least MsE will be preferred model.  
+
+occupancyratestimeseries <- read.csv("C:/Users/hshah/Desktop/DM-ML/Practicum 1/occupancyratestimeseries.csv")
+
+df3 <- data.frame(occupancyratestimeseries)
+str(df3)
+
+# Simple moving average
+
+df3$ft_sma <- 0
+df3$er_sma <- 0
+
+df3[1,3] <- df3[1,2]
+df3[2,3] <- df3[2,2]
+df3[3,3] <- df3[3,2]
+
+
+for (i in 4:nrow(df3)) {
+  df3$ft_sma[i] <- mean(df3$ft_sma[(i-3):(i-1)])
+  df3$er_sma[i] <- df3$OccupancyRate[i] - df3$ft_sma[i]
+}
+df3
+
+#forecast for next time period = 31.66667
+n <- nrow(df3)
+last3 <- df3[n:(n-2), 2]
+last3
+
+ft_sma <- mean(last3)
+ft_sma
+
+# MSE = 62.81887
+a <- abs(df3$er_sma)
+a
+b <- mean(a^2)
+b
+
+n <- nrow(df3)
+last3 <- df3[n:(n-2), 2]
+last3
+mean <- mean(df3$ft_sma) 
+sd <- (sd((df3$ft_sma)^2))
+z <- 1.96 # 95% prediction interval
+
+# Forecast with 95% prediction interval 
+Pred_Int_sma <- ft_sma + ((z)*sqrt((sd)/(n)))
+Pred_Int_sma.1 <- ft_sma - ((z)*sqrt((sd)/(n)))
+Pred_Int_sma
+Pred_Int_sma.1
+
+# Forecast = 31.66667; Prediction Interval: (30.75601, 32.57732), MSE: 62.81887
+
+
+```
+```{r}
+
+## For weighted moving average
+
+weights <- c(4,1,1)
+sweights <- weights*last3
+sweights
+df3.1 <- data.frame(occupancyratestimeseries)
+df3.1$ft_wma <- 0
+df3.1$er_wma <- 0
+
+df3.1[1,3] <- df3.1[1,2]
+df3.1[2,3] <- df3.1[2,2]
+df3.1[3,3] <- df3.1[3,2]
+for (i in 4:nrow(df3.1)) {
+  df3.1$ft_wma[i] <- sum(weights*(df3.1$ft_wma[(i-3):(i-1)]))/sum(weights)
+  df3.1$er_wma[i] <- df3.1$OccupancyRate[i]-df3.1$ft_wma[i]
+}
+(df3.1)
+
+# forecast nxt time period = 33.08333
+ft_wma_next <- sum(sweights)/sum(weights)
+ft_wma_next
+
+#mean sq. error = 67.74174
+c <- abs(df3.1$er_wma)
+c
+d <- mean(c^2) 
+d
+
+
+n = nrow(occupancyratestimeseries)
+
+mean.1 <- mean(df3.1$ft_wma)
+sd.1 <- sd((df3.1$ft_wma)^2)
+z = 1.96
+
+pred_Int_wma <- ft_wma_next + ((z)*sqrt((sd.1)/(n)))
+pred_Int_wma.1 <- ft_wma_next - ((z)*sqrt((sd.1)/(n)))
+pred_Int_wma
+pred_Int_wma.1
+
+# Forecast = 33.08333; Prediction Interval: (32.13354, 34.03313), MSE: 67.74174 
+
+
+
+```
+```{r}
+
+## For Exponential smoothing
+df4 <- as.data.frame(occupancyratestimeseries)
+df4
+
+##alpha = 0.2
+df4$ft_es <- 0
+df4$er_es <- 0
+head(df4)
+
+df4$ft_es[1] <- df4[1,2]
+head(df4)
+
+a1 <- 0.2
+df4$ft_es[2] <- df4$ft_es[1] + a1*df4$er_es[1]
+df4$er_es[2] <- df4[2,2] - df4$ft_es[2]
+
+head(df4)
+
+##algorithm/loop for upto n rows in exponential smoothing
+for (i in 2:nrow(df4)) {
+  df4$ft_es[i] <- df4$ft_es[i-1] + a1*df4$er_es[i-1]
+  df4$er_es[i] <- df4$OccupancyRate[i] - df4$ft_es[i]
+}
+df4
+
+n3 <-nrow(df4)
+n3
+
+# forecast for next period  = 33.25209
+ft_es_next <- df4$ft_es[n3] + a1*df4$er_es[n3]
+ft_es_next
+
+sd.7 <- sd((df4$ft_es)^2)
+z = 1.96
+
+pred_Int_es <- ft_es_next + ((z)*sqrt((sd.7)/(n3)))
+pred_Int_es.1 <- ft_es_next - ((z)*sqrt((sd.7)/(n3)))
+pred_Int_es
+pred_Int_es.1
+
+# MSE = 55.87835
+e <- abs(df4$er_es)
+e
+f <- mean(e^2) 
+f
+
+# Forecast = 33.25209; Prediction Interval: (30.88998, 35.61419), MSE: 55.57835
+```
+
+```{r}
+
+## For Linear regression
+
+pred.lm <- lm(formula= OccupancyRate ~ Period, data = occupancyratestimeseries)
+summary(pred.lm)
+newdata <- data.frame(Period=167)
+b <- predict(pred.lm,newdata, interval = "confidence")
+b # fit = 37.46291 with 95% prediction interval
+
+# forecast for next time period = 37.44851
+next_period_lin_regression <- 34.94191 + (0.01510)*167
+next_period_lin_regression
+
+
+
+# Also, I've ried with another method though traditional method in order to evaluate the model accurately and compare it with other time-series models in terms of predicted forecast with its accuracy. (i.e Using MSE and comaring and finally the model with least MSE value could be preferred forecasting model in order to trust with the predicted values)
+df3.2 <- data.frame(occupancyratestimeseries)
+df3.2$ft_lm <- 0
+df3.2$er_lm <- 0
+
+for (i in 1:nrow(df3.2)) {
+  df3.2$ft_lm[i] <- (0.01510)*df3.2$Period[i]+34.94191
+  df3.2$er_lm[i] <- abs(df3.2[i,2]-df3.2$ft_lm[i])
+}
+df3.2
+
+sd9 <- sd((df3.2$ft_lm)^2)
+sd9
+
+pred_int_lm <- next_period_lin_regression + ((z)*sqrt((sd9)/(n)))
+pred_int_lm
+pred_int_lm1 <- next_period_lin_regression - ((z)*sqrt((sd9)/(n)))
+pred_int_lm1
+
+# MSE = 53.42286
+h <- abs(df3.2$er_lm)
+h
+u <- mean(e^2) 
+u
+
+# Forecast = 37.46291, with 95% prediction interval; Prediction Interval: (33.36081, 38.56641), MSE: 53.42286
+
+# According to results, Linear regression time series forecasting model will be preferred model in term of forecasting. Since it has the least mean square error compared to other time series forecasting methods implemented. 
+
+```
+
+

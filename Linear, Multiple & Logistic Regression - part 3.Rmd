@@ -1,0 +1,117 @@
+---
+title: 'Assignment-6: Problem 3'
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+#HARSH SHAH (001273963)
+#DA5030 | 35664 | Intro Data Mining & Machine Learning | SEC 01 | Spring 2018
+#Assignment: 6
+```
+
+Problem-3 Question 1
+Implement the example from the textbook on pages 205 to 217 for the data set on white wines.
+```{r}
+# Import and read the whitewines dataset
+whitewines <- read.csv("C:/Users/hshah/Desktop/DM-ML/Assignment 6 Regression-Linear, Multiple, Logistic/whitewines.csv")
+
+# In order to analyze the structure of the dataset
+str(whitewines)
+
+# In order to analyze the distribution of the daaset
+hist(whitewines$quality)
+
+summary(whitewines)
+```
+
+Training/Testing datasets partition
+```{r}
+wine_train <- whitewines[1:3750,]
+wine_test <- whitewines[3751:4898, ]
+```
+
+Training a model on data
+```{r}
+# Loading the "rpart" package
+library(rpart)
+
+# Using underlying "rpart" function in order to result in a regression tree model 
+m.rpart <- rpart(quality ~ ., data = wine_train)
+
+m.rpart
+
+summary(m.rpart)
+```
+
+Visualizing decision trees
+```{r}
+# Loading the rpart.plot package in order to visualize the decision trees
+library(rpart.plot)
+
+rpart.plot(m.rpart, digits = 3)
+
+rpart.plot(m.rpart, digits = 4, fallen.leaves = TRUE, type = 3, extra = 101)
+```
+
+Evaluating Model Performance
+```{r}
+# Using "predict" function in oder to predict the regression tree model object against the test dataset "wine_test"
+p.rpart <- predict(m.rpart, wine_test)
+
+summary(p.rpart)
+
+summary(wine_test$quality)
+
+# Analyzing the correlation between the predicted and actual target variable in terms of strength of relation between them
+cor(p.rpart, wine_test$quality)
+```
+
+Measuring performance with mean absolute error
+```{r}
+MAE <- function(actual, predicted) {
+  mean(abs(actual - predicted))
+}
+
+MAE(p.rpart, wine_test$quality)
+
+mean(wine_test$quality)
+
+MAE(5.85, wine_test$quality)
+```
+
+improving model performance
+```{r}
+# Loading the required "RWeka" package 
+library(RWeka)
+
+# Using the underlying the "M5P()" function in order to improve the performance of the model. It improves the model tree by replacing the regression trees by leaf nodes. Since it uses only single node in prediction.
+m.m5p <- M5P(quality ~., data = wine_train)
+
+m.m5p
+
+summary(m.m5p)
+
+p.m5p <- predict(m.m5p, wine_test)
+
+summary(p.m5p)
+
+cor(p.m5p, wine_test$quality)
+
+MAE(wine_test$quality, p.m5p)
+```
+
+Problem-2: Question 2
+Calculate the RMSE for the model.
+```{r}
+RMSE <- function(actual, predicted) {
+  sqrt((mean(abs(actual - predicted)))^2)
+}
+# Root mean square implies that, the difference between our model's predictions and the true quality score.
+RMSE(p.rpart, wine_test$quality)
+
+# Root mean square error between the improved model and the true quality score; which seems to be reduced. Hence, it worked. 
+RMSE(wine_test$quality, p.m5p)
+```
+

@@ -1,0 +1,213 @@
+---
+title: "Assigment 7"
+output: html_notebook
+---
+
+HARSH SHAH (001273963)
+DA5030 | 35664 | Intro Data Mining & Machine Learning | SEC 01 | Spring 2018
+Assignment: 7
+
+# Problem-1:
+Build an R Notebook of the concrete strength example in the textbook on pages 232 to 239. Show each step and add appropriate documentation.
+```{r}
+# Import and read concrete data
+concrete <- read.csv("C:/Users/hshah/Desktop/DM-ML/Assignment 7 Neural Networks, SVM, & Association Rules/concrete.csv")
+
+# To determine the structure of the dataset
+str(concrete)
+```
+```{r}
+# To transform and normalize the dataset, used normalize function
+normalize <- function(x) {
+  return((x - min(x))/ (max(x) - min(x)))
+}
+
+# Applied normalization to every column of the dataset using "lapply()" function
+concrete_norm <- as.data.frame(lapply(concrete, normalize))
+
+summary(concrete_norm$strength)
+
+summary(concrete$strength)
+
+
+# Partition the dataset in ratio of 70/30 with 70% data in training and rest 30% in testing
+concrete_train <- concrete_norm[1:773, ]
+concrete_test <- concrete_norm[774:1030, ]
+```
+Training a model on the data
+```{r}
+# Loaded library "neuralnet" to train the model with ANN-artificial neural network
+library(neuralnet)
+
+# Created a model with significant feature variables
+concrete_model <- neuralnet(strength ~ cement + slag + ash + water + superplastic + coarseagg + fineagg + age, data = concrete_train)
+
+# To visualize the implementation of the model and to analyze its error and steps by default
+plot(concrete_model)
+```
+Evaluating model performance
+```{r}
+# Used compute() function to test against test dataset, it's distinct from the predict() function, since it returns a list with two components: $neurons, which stores the neurons for each layer in the network, and $net.result, which stores the predicted values.
+model_results <- compute(concrete_model, concrete_test[1:8])
+
+# Giving a variable to predicted values (i.e. $net.result)
+predicted_strength <- model_results$net.result
+
+# Identifying and ensuring the correlation between the actual and predicted values
+cor(predicted_strength, concrete_test$strength)
+```
+Improving the model performance
+```{r}
+# Improving a trained and evaluated model, by creating more complex topologies and make learn the model more difficult concepts; by adding the number of nodes in a network through adding parameter hidden (i.e. 5 in this case)
+concrete_model2 <- neuralnet(strength ~ cement + slag + ash + water + superplastic + coarseagg + fineagg + age, data = concrete_train, hidden = 5)
+
+# ANalyizing the difference in impact of the performance
+plot(concrete_model2)
+
+# Computing it against the test data in order to get the predicted values and each layer of neurons
+model_results2 <- compute(concrete_model2, concrete_test[1:8])
+
+# Giving a variable to the predicted values
+predicted_strength2 <- model_results2$net.result
+
+# Analyzing the correlation against the test dataset
+cor(predicted_strength2, concrete_test$strength)
+```
+# Problem 2:
+Build an R Notebook of the optical character recognition example in the textbook on pages 249 to 257. Show each step and add appropriate documentation.
+```{r}
+# Import and read letterdata
+letterdata <- read.csv("C:/Users/hshah/Desktop/DM-ML/Assignment 7 Neural Networks, SVM, & Association Rules/letterdata.csv")
+
+# Determining the structure of the data
+str(letterdata)
+```
+Partioning the dataset
+```{r}
+# Splitting the data ratio of 80/20
+letters_train <- letterdata[1:16000, ] 
+letters_test  <- letterdata[16001:20000, ] 
+```
+Training a model on data
+```{r}
+# Loaded the library "kernlab" in order to model SVM classifier; a machine learning algorithm 
+library(kernlab)
+
+# Trained SVM classifier using ksvm() function of the "kernlab" library
+letter_classifier <- ksvm(letter ~ ., data = letters_train, kernel = "vanilladot")
+# parameter "kernel" specifies a non-linear mapping such as "rbfdot"(radial basis), "polydot"(polynomial), "tanhdot"(hyperbolic tangent sigmoid), "vanilladot"(linear)
+
+letter_classifier
+```
+Evaluating model performance
+```{r}
+# Predicting the outcome of the model against the test dataset
+letter_predictions <- predict(letter_classifier, letters_test)
+
+head(letter_predictions)
+
+# Analyzing through using table() function
+table(letter_predictions, letters_test$letter)
+
+# creating a variable which will return the vector of TRUE/FALSE values, indicating whether model's predicted values matches with the actual values
+agreement <- letter_predictions == letters_test$letter
+
+# Analyzing through using table() function
+table(agreement)
+
+# To know the proportion of the true/false values in a vector
+prop.table(table(agreement))
+```
+Improving a model performance
+```{r}
+# Improving a trained and evaluated model by implementing different kernels in a "kernel" parameter and identify the result outcome accuracy
+letter_classifier_rbf <- ksvm(letter ~ ., data = letters_train, kernel = "rbfdot")
+
+# Predicted a model against the test dataset
+letter_predictions_rbf <- predict(letter_classifier_rbf, letters_test)
+
+# creating a variable which will return the vector of TRUE/FALSE values, indicating whether model's predicted values matches with the actual values
+agreement_rbf <- letter_predictions_rbf == letters_test$letter
+
+# Analyzing through using table() function
+table(agreement_rbf)
+
+# To know the proportion of the true/false values in a vector
+prop.table(table(agreement_rbf))
+```
+
+# Problem 3:
+Build an R Notebook of the grocery store transactions example in the textbook on pages 266 to 284. Show each step and add appropriate documentation.
+```{r}
+# Loaded the "arules" library in order to use relevant function to read the dataset according to the requirement.
+library(arules)
+
+# Imported and read the groceries dataset using read.transactions() function since we're loading transactional data. The parameter sep will make sure the data files are seperated by comma
+groceries <- read.transactions("C:/Users/hshah/Desktop/DM-ML/Assignment 7 Neural Networks, SVM, & Association Rules/groceries.csv", sep = ",")
+
+# To determine the structure of the data
+str(groceries)
+
+summary(groceries)
+
+# To look at the content of the sparse matrix with combination of the of the vector operations 
+inspect(groceries[1:5])
+
+# To view the support level of the items in the dataset. In this case of the first 3 items.
+itemFrequency(groceries[, 1:3])
+
+# Visulaizing the items which appeared at the top transactions of the dataset. In this case it is top 20 items
+itemFrequencyPlot(groceries, topN = 20) 
+
+
+# In order to visualize the whole sparse matrix, used image() function. In this case, it displayed the sparse matrix of the first five transactions
+image(groceries[1:5])
+
+# It creates the random selection of the transactions . In this case its 100.
+image(sample(groceries, 100))
+```
+
+Training a model on the data
+```{r}
+library(arules)
+# Using apriori function, it trains a model with all the default values in the specified parameters
+apriori(groceries)
+
+# Training a model with support of 0.006 it defines the number of times the transaction occurs, confidence with 0.25 which means that rule has to be 25% correct in order to get involvedand minlen as 2 which evemtually eliminate the rules having less than 2 items
+groceryrules <- apriori(groceries, parameter = list(support = 0.006, confidence = 0.25, minlen = 2))
+
+groceryrules
+```
+Evaluating model performance
+```{r}
+# To obtain the high level ovierview of the association rules
+summary(groceryrules)
+
+# To identify and analyze the specific rules, we can use inpect() function.
+inspect(groceryrules[1:3])
+```
+Improving model performance
+```{r}
+# Improved a trained an evaluated model. We can use sort() function which applies to specifying a reorder of the "support", "confidence" and "lift" value to the parameter. In this case, its examined the best five rules considering it according to the "lift" statistics.
+inspect(sort(groceryrules, by = "lift")[1:5])
+
+
+# Taking subset of association rules
+berryrules <- subset(groceryrules, items %in% "berries")
+
+# To take a look at specific rules of the "berryrules" (i.e. in this case)
+inspect(berryrules)
+
+
+# Saving association rules to a file or dataframe using write() function
+write(groceryrules, file = "C:/Users/hshah/Desktop/DM-ML/Assignment 7 Neural Networks, SVM, & Association Rules/groceries.csv", sep = ",", quote = TRUE, row.names = FALSE)
+
+# Creating a new dataframe
+groceryrules_df <- as(groceryrules, "data.frame")
+
+# To determine the structure of the dataframe
+str(groceryrules_df)
+```
+
+
+

@@ -1,0 +1,182 @@
+---
+title: 'Assignment: 8'
+output:
+  html_document:
+    df_print: paged
+---
+
+HARSH SHAH (001273963) 
+DA5030 | 35664 | Intro Data Mining & Machine Learning | SEC 01 | Spring 2018 
+Assignment: 8
+
+# Problem: 1
+Build an R Notebook of the social networking service example in the textbook on pages 296 to 310. Show each step and add appropriate documentation.
+
+Finding teen market segments using k-means clustering:
+
+Data Collection, Exploration & Preparartion
+```{r}
+# Import and read snsdata
+teens <- read.csv("C:/Users/hshah/Desktop/DM-ML/Assignment 8 Finding Patterns & Clusters/snsdata.csv")
+
+# To view the structure of the data
+str(teens)
+
+# To identify any missing records in a column by number of less records in total of both the categories
+table(teens$gender)
+
+# Used "useNA" paramenter to include in, if there's any missing records in a column.
+table(teens$gender, useNA = "ifany")
+
+summary(teens$age)
+
+# It's ideal to review every column and ensure relavant values. Used ifelse() function to replace the some records in exception with NA, since if its value don't lie between 13 & 20.
+teens$age <- ifelse(teens$age >= 13 & teens$age <= 20, teens$age, NA)
+
+summary(teens$age)
+```
+
+Data Preparation - Dummy Coding Missing Values
+```{r}
+# Created dummy code variables to infer the different categories of column "gender".
+teens$female <- ifelse(teens$gender == "F" & !is.na(teens$gender), 1, 0)
+teens$no_gender <- ifelse(is.na(teens$gender), 1, 0)
+
+# Checking with function "table()"
+table(teens$gender)
+table(teens$female)
+table(teens$no_gender)
+```
+
+Data Preparation - Impute Missing Values 
+```{r}
+# To identify mean of the column "age"
+mean(teens$age)
+
+# But, it includes the missing values. Hence identified using the parameter "na.rm"
+mean(teens$age, na.rm = TRUE)
+
+# To impute the missing values of column "age", w.r.t the mean of the specific grad year persons. Used aggregate function to identify the mean of the column "age" to do the same, excluding the missing values with "na.rm" parameter
+aggregate(data = teens, age ~ gradyear, mean, na.rm = TRUE)
+
+# Created vector using ave function to impute the column "age" further, since aggregat() function created dataframe as an output.
+ave_age <- ave(teens$age, teens$gradyear, FUN = function(x) mean(x, na.rm = TRUE))
+
+# Imputed the missing records with mean values w.r.t specific graduation year.
+teens$age <- ifelse(is.na(teens$age), ave_age, teens$age)
+
+# It shows that missing values are being removed and imputed by the mean values from the original vector created
+summary(teens$age)
+```
+
+Training a Model on the Data
+```{r}
+# Created the dataframe containg only the features from column 5 to 40
+interests <- teens[5:40]
+
+# Normalizing the dataframe using lapply() function to apply for all columns with using parameter "scale"
+interests_z <- as.data.frame(lapply(interests, scale))
+
+# To make the analysis resuablke with same data/random numbers 
+set.seed(2345)
+
+# It divides the interests data into 5 clusters using kmeans() function
+teen_clusters <- kmeans(interests_z, 5)
+```
+
+Evaluating Model Performance
+```{r}
+# To identify the size of each created clusters 
+teen_clusters$size
+
+# To identify the co-ordinates of the cluster centroids 
+teen_clusters$centers
+```
+
+Improving a model performance
+```{r}
+# cretaed a seperate vector of co-ordinates of the cdentroids of cluster
+teens$cluster <- teen_clusters$cluster
+
+# To examine the individual characteristics according to cluster assignments. In this case identified for first five teens of the snsdata
+teens[1:5, c("cluster", "gender", "age", "friends")]
+
+# Used aggregate() function to identify the demographic characteristics of the clusters. In this case, its for age with its mean values.
+aggregate(data = teens, age ~ cluster, mean)
+
+# For "female" column
+aggregate(data = teens, female ~ cluster, mean)
+
+# For "friends" column
+aggregate(data = teens, friends ~ cluster, mean)
+
+# Hence the algorithm worked quite well, since it identifies and predicts the cluster in a remarkable way considering its behavior characteristics and can prove to be useful in a market in a excellent way.
+```
+
+
+#Problem: 2
+
+#Question-1: 
+What are various ways to predict a binary response variable? Can you compare two of them and tell me when one would be more appropriate? What’s the difference between these? (SVM, Logistic Regression, Naive Bayes, Decision Tree, etc.)
+
+Question: What are the various ways to predict binary response variable? Can you compare two of them and tell me when one would be more appropriate?
+Answer: 
+Binary respinse variable are also called target class variable. The methods to predict the same is called binary classification method. There are several supervised machine algorithms that results in prediction of the target class/binary response variable, which are kNN, NaiveBayes, Decision Trees, Random Forest, Binomial Logistic Regression, Support Vector Machine (SVM), etc.
+
+Lets compare Binomial Logistic Regression & Decision trees classification method to predict binary reponse variable:
+
+Firstly, the best possible option to choose the most appropriate method would be completely based on the type of the dataset in terms of its size, number of feature variables considering its dimensionality, and datatype of every specific feature variables. This would be the factors that is considered while opting the most appropriate method to predict binary response variable. 
+
+Binomial Logistic Regression is the widely used, and the most appropriate method of prediction especially for the binary classification. But there are several aspects that are required to take into consideration before initializing the implementation. As such, this method works only with the numeric feature variables while the Decision trees classification method works with all the types of the feature variables regardless of the type of the data (i.e. numeric/nominal). But there are several other aspects that should be considered while before implementing the decision trees classification in terms of feature variables with other limitaions like, it tries to overfits the model and don't tend to build the generalized algorithm which could get implemented on any type of the dataset in order to get the maximum prediction accuracy when there are categorical feature variables with more than 2-3 class. Since, the algorithm works on the information gain and entropy, it tries to give more weigh to that feature variables although if it should not be considered as a significant predictor variable with identifying from other feature engineering methods or executing domain knowledge over it. 
+
+Hence, considering all the facotors described, should be applied on the specific dataset in order to consider while before implementing the algorithm to predict the outcome.
+
+
+Question: What's the difference between these? (SVM, Logistic Regression, Naive Bayes, Decision Trees)
+Answer:
+1) NaiveBayes: It is the linear classification algorithm, easy to build and most probably used for the large datasets. It basically works with both continuous and categorical feature variables but predicts good result with categorical feature variables, since it works based on the probabilistic classification. Besides, it presume every predictor variables to be independent of each other to preidict the accurate outcome.
+
+2) Logistic Regression: It works only with the numeric feature variables. Also, it predicts the best fitted model to describe the relationship between dependent and independent feature variables.
+
+3) Decision Trees: It can handle both continuous and categorical feature variables with some categorical feature variable having multiple categories limitations. It works on infoirmation gain and entropy which statistically decides the root nodes, and everything associated with its division in the branches and predict the accurate outcome.
+
+4) SVM: It is also the supervised machine learning algorithm, which performs classification by finding the different hyperplane that differentiates the classes and predicts the outcome based on that computation. It works well with high dimensional dataset and small datasets.
+
+
+#Question-2: 
+Answer:
+Why might it be preferable to include fewer predictors over many?
+
+This hypothesis basically depends on which algorithms you are using and what type of the dataset you are working in order to predict the outcome. But, in general, it is always preferable to include fewer predictor variables over many for many possible advantages as such; it avoids overfitting of the trained model and try to predict the outcome considering only statistically significant predictor variables. That's place where feature selection methods comes into execution. Also, high dimensionality includes more data and that must include missing data which could prove to be not good for our prediction outcome. 
+
+Besides, if we are ignoring to work with high dimensional dataset and avoiding few of the feature variables to take into account to predict the outcome. It is preferable to implement regularization, which helps not to avoid significant predictor variables and should take into consideration while implementing the prediction classification.
+
+
+#Question-3: 
+Given a database of all previous alumni donations to your university, how would you predict which recent alumni are most likely to donate?
+Answer:
+This is binary classification, since in this case, in order to predict whether which recent alumni are most likely to donate is dependent on the set of feature variables which should be taken in consideration while predicting the outcome. 
+
+Practically, the database has all the previous alumni donations to the university and it would be ofcourse for the many previous years, so that could be our dataset within which we could partition the dataset into training and testing dataset and train the model based on the training dataset and check prediction accuracy against the test dataset. Then simple, implement that trained model against the recent alumni dataframe/dataset and identify whether which alumni are likely to donate and which are not. 
+
+Alternatively, we can create cluster of the alumnis which could result into the output of the clusters with its amount of donation and frequency of doin git and many other features that could be taken in consideration while implementing it to create cluster and identify the individual characteritics of the alumni with different donation behavior and on the basis of that we could predict that which recent alumni possess an ability to donate most likely w.r.t the prediction output considering the trained model and trying against it eventually.
+
+
+#Question-4: 
+What is R-Squared? What are some other metrics that could be better than R-Squared and why?
+Answer:
+R-Squared: It is a type of statistical measure which depicts of how close the data are to the fitted regression line or how well the trained model fits the data. Its also known as the coefficient of determination and explains its variability around the data (i.e. if R-Squared is 0% then it means that model has no variability of the data around the mean, and if it is 100% then the model explains the all variability of the data around the mean.) 
+
+Adjusted R-Squared should be considered as the metrics which is better than R-Squared, because it implies as the  modified version of the R-Squared for all the predictor variables. It increases its value only if the new terms improves the model more than expected by chance, otherwise it decreases when a predictor improves the model less than expected by chance.
+
+
+#Question-5: 
+How can you determine which features are the most important in your model?
+Answer:
+In order to train the model with maximum prediction accuracy, it is necessary to evaluate and figure out which feature variables are statistically significant to consider in a machine learning model to get the prediction output.
+
+There are many methods which helps to identify and eliminate the non-significant predictor variables to train the model with only significant feature variable. Theere are several automatic-feature selection approaches which includes forward and backward fitting using either p-value, Adjusted R-Squared, AIC, or PCA. Besides, in practice we might come across the features which are computation of the multiple columns and that is where we could plan to execute out domain knowledge and figure out the consideration of it in order to consider it in training the model with statistically significant feature variable with maximum prediction accuracy.
+
+
+
+

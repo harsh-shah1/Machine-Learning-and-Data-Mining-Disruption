@@ -1,0 +1,132 @@
+---
+title: 'Assignment-6: Problem 1'
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+#HARSH SHAH (001273963)
+#DA5030 | 35664 | Intro Data Mining & Machine Learning | SEC 01 | Spring 2018
+#Assignment: 6 
+```
+
+
+Dataset on student achievement
+```{r}
+#Import and read the student-mat dataset
+student.mat <- read.csv("C:/Users/hshah/Desktop/DM-ML/Assignment 6 Regression-Linear, Multiple, Logistic/student/student-mat.csv", sep=";")
+
+# To analyze the structure of the dataset
+str(student.mat)
+
+# To analyze the type of distribution of the underlying dataset
+hist(student.mat$G3)
+```
+
+Problem-1: Question 1
+Create scatter plots and pairwise correlations between four continuous variables and the final grade (G3) using the pairs.panels() function in R. Pick the variables you believe are most useful.
+```{r}
+df1 <- student.mat
+df1
+
+str(df1)
+
+# Loaded "psych" library to use the following underlying functions for analysis of the correlations between the target and predictor variables.
+library(psych)
+
+pairs.panels(df1[c("G3", "studytime", "famrel", "goout", "absences")])
+```
+
+Problem-1: Question 2
+Build a multiple regression model predicting final math grade (G3) using as many features as you like but you must use at least four. Include at least one categorical variables and be sure to properly convert it to dummy codes. Select the features that you believe are useful -- you do not have to include all features.
+```{r}
+df2 <- data.frame(student.mat)
+str(df2)
+
+# Creating dummy code variables in case of the categorical variables with more that 2 factors, in order to carry over the multiple regression model as per the requirement of the analysis. 
+# Also used, only features that I believed are useful
+
+guardian_dummy <- df2$guardian
+guardian_mother <- ifelse(guardian_dummy == "mother", 1, 0)
+guardian_other <- ifelse(guardian_dummy == "other", 1, 0)
+
+paid_dummy <- df2$paid
+paid_dummy <- ifelse(paid_dummy == "yes", 1, 0)
+
+famsize_dummy <- df2$famsize
+famsize_dummy <- ifelse(famsize_dummy == "GT3", 1, 0)
+
+famsup_dummy <- df2$famsup
+famsup_dummy <- ifelse(famsup_dummy == "yes", 1, 0)
+
+str(df2)
+
+df2 <- cbind(paid_dummy, df2)
+df2 <- cbind(famsize_dummy, df2)
+df2 <- cbind(famsup_dummy, df2)
+df2 <- cbind(guardian_mother, df2)
+df2 <- cbind(guardian_other, df2)
+
+
+# Multiple regression model
+b <- lm(G3 ~ traveltime+goout+absences+guardian_mother+guardian_other+paid_dummy+famsize_dummy+famsup_dummy, data = df2)
+
+summary(b)
+```
+
+Problem-1: Question 3
+Use stepwise backward elimination to remove all non-significant variables and then state the final model as an equation. State the backward elimination measure you applied (p-value, AIC, Adjusted R2).
+```{r}
+# Applied AIC method with backward elimination in order to remove all non-significant variables using "step()" function
+step(b)
+
+str(df2)
+
+# Training a final multiple regression model with statistically significant feature variables
+final_lm <- lm(G3 ~ traveltime+goout+paid_dummy+famsize_dummy+guardian_other, data = df2)
+
+summary(final_lm)
+
+
+# State the final model equation, in order to carry out regression of new cases with highest statistical significance
+
+# 13.5165 - 0.7143(traveltime) - 0.5506(goout) + 0.8856(paid_dummy) - 0.9159(famsize_dummy) - 1.3523(guardian_other)
+```
+
+Problem-1 Question 4
+Calculate the 95% confidence interval for a prediction -- you may choose any data you wish for some new student.
+```{r}
+pred.m  <- lm(formula = G3 ~ traveltime + goout + paid_dummy + famsize_dummy + guardian_other, data = df2)
+summary(pred.m)
+
+str(df2)
+# New case with data of the student
+new_d <- data.frame(traveltime=1, goout=3, paid_dummy=1, famsize_dummy=1, guardian_other=0)
+new_d
+
+# Predicting the result of the student with new student case data; here by passing parameter with interval = "confidence", it will apparantly carry out prediction with 95% confidence interval
+v <- predict(pred.m, new_d, interval = "confidence")
+v
+
+# 95% confidence interval (10.36038, 11.8801) #fit = 11.12024
+#v+CI_interval = 10.36038
+#v-CI_interval = 11.8801
+```
+
+Problem-1: Question 5
+What is the RMSE for this model -- use the entire data set for both training and validation.
+```{r}
+df2$predicted <- predict(pred.m)   # Save the predicted values
+df2$residuals <- residuals(pred.m) # Save the residual values
+
+# Quick look at the actual, predicted, and residual values
+library(dplyr)
+df2 %>% select(G3, predicted, residuals) %>% head()
+RMSE <- sqrt(mean((df2$residuals)^2))
+RMSE #RMSE of the model
+```
+
+
+
+

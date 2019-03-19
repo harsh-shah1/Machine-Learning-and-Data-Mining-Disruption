@@ -1,0 +1,141 @@
+---
+title: 'Assignment-6: Problem 2'
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+#HARSH SHAH (001273963)
+#DA5030 | 35664 | Intro Data Mining & Machine Learning | SEC 01 | Spring 2018
+#Assignment: 6 
+```
+
+Problem-2: Question 1
+Using the same data set as in Problem (1), add another column, PF -- pass-fail. Mark any student whose final grade is less than 10 as F, otherwise as P and then build a dummy code variable for that new column. Use the new dummy variable column as the response variable.
+```{r}
+#Import and read the student-mat dataset
+student.mat <- read.csv("C:/Users/hshah/Desktop/DM-ML/Assignment 6 Regression-Linear, Multiple, Logistic/student/student-mat.csv", sep=";")
+
+df3 <- data.frame(student.mat)
+
+# Adding a new column in df3
+df3$PF <- 0
+
+# Converting the column to the factor datatype variable, in order to input "Pass" & "Fail" considering the result of the G3 as per the requirement of the case
+df3$PF <- as.factor(df3$PF)
+
+# Analyzing the structure of the dataframe
+str(df3)
+
+n <- nrow(df3)
+
+# Creating a vector x of the G3 variable
+x <- df3$G3
+
+# Inputing the value using "ifelse()" function
+df3$PF <- ifelse(x < 10,"F","P")
+
+# Creating dummy code variable for the "PF" we created
+PF_dummy <- df3$PF
+PF_dummy <- ifelse(PF_dummy == "F", 1, 0)
+PF_dummy
+
+# Binding it with the usable dataframe
+df4 <- cbind(PF_dummy, df3)
+df4
+
+
+str(df4)
+table(df4$PF)
+```
+Problem-2: Question 2
+Build a binomial logistic regression model classifying a student as passing or failing. Eliminate any non-significant variable using an elimination approach of your choice. Use as many features as you like but you must use at least four -- choose the ones you believe are most useful.
+```{r}
+str(df4)
+
+# Creating dummy code variable for the categorical feature variables in order to analyze and train the binomial logistic regression
+guardian_dummy <- df3$guardian
+guardian_mother <- ifelse(guardian_dummy == "mother", 1, 0)
+guardian_other <- ifelse(guardian_dummy == "other", 1, 0)
+
+paid_dummy <- df3$paid
+paid_dummy <- ifelse(paid_dummy == "yes", 1, 0)
+
+famsize_dummy <- df3$famsize
+famsize_dummy <- ifelse(famsize_dummy == "GT3", 1, 0)
+
+famsup_dummy <- df3$famsup
+famsup_dummy <- ifelse(famsup_dummy == "yes", 1, 0)
+
+str(df4)
+
+df4 <- cbind(paid_dummy, df4)
+df4 <- cbind(famsize_dummy, df4)
+df4 <- cbind(famsup_dummy, df4)
+df4 <- cbind(guardian_mother, df4)
+df4 <- cbind(guardian_other, df4)
+
+# Training a binomial logistic regression model
+j <- glm(formula= PF_dummy ~ traveltime + paid_dummy + goout + famsize_dummy + famsup_dummy + guardian_mother + guardian_other, data = df4, family = binomial)
+
+summary(j)
+
+
+# Using AIC method for backward elimination of the non-significant feature variabke in order to take into account only statistically significant feature variables
+step(j)
+
+
+# Training a model for binomial logistic regression
+f <- glm(formula = PF_dummy ~ paid_dummy + goout + famsup_dummy + guardian_other, family = binomial, data = df4)
+
+summary(f)    
+```
+
+Problem-2: Question 3
+# State the regression equation 
+```{r}
+# Regression_equation = -2.0172 - 0.5465(paid_dummy) + 0.3754(goout) + 0.4462(famsup_dummy) + 0.8279(guardianother) 
+ 
+str(df4) 
+```
+
+Problem-2: Question 2
+What is the accuracy of the model?
+```{r}
+# Determining accuracy of the model using the root mean square error
+
+df4$predicted <- predict(f)   # Save the predicted values
+df4$residuals <- residuals(f) # Save the residual values
+
+# Quick look at the actual, predicted, and residual values
+library(dplyr)
+df4 %>% select(PF, predicted, residuals) %>% head()
+RMSE <- sqrt(mean((df4$residuals)^2))
+RMSE
+str(df4)
+
+# Alternate method to analyze accuracy
+
+# Partitioning Training/Testing dataset
+df4_train <- df4[1:276, c(1,3,5,6)]
+df4_test <- df4[277:395, c(1,3,5,6)]
+
+str(df4_train)
+
+# Training a model on the training dataset, in oder to further predict target against the test dataset feature variables. 
+l <- glm(formula = PF_dummy ~  paid_dummy, famsup_dummy + guardian_other, family = binomial, data = df4_train)
+summary(l)
+
+# Prediction against the test dataset
+predict_test <- predict(l, df4_test)
+
+actuals_preds <- data.frame(cbind(actuals=df4_test$PF_dummy, predicteds=predict_test))
+
+# Loading the required package in order to determine the accuracy of the actual vs predicted prediction of the test dataset, using underlying "Crosstable()" function.
+library(gmodels)
+CrossTable(df4_test$PF_dummy, predict_test)
+```
+
+
+
