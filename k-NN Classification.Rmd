@@ -1,0 +1,218 @@
+---
+title: "Assignment-3"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+
+```{r}
+
+#HARSH SHAH (001273963)
+#DA5030 | 35664 | Intro Data Mining & Machine Learning | SEC 01 | Spring 2018
+#Assignment: 3
+
+
+
+## (1) Installed R-studio, builded and executed the code in R Markdown Notebook and tried organizing the output in a readable format.
+
+
+
+## (2) Downloaded the Prostate Cancer Dataset for the Assignment
+
+
+
+#### (3)  KNN-Algorithm using "class" package for Prostate Cancer Detection
+
+
+## Step 1 - Collecting the data
+
+#The dataset consists of 100 observations and 10 variables including 1 ID variable, 1 Class variable and 8 features variable
+
+# This command imports the required data set and saves it to the prc data frame & 
+# stringsAsFactors will help to convert every character vector to a factor wherever it makes sense.
+prc <- read.csv("C:/Users/hshah/Desktop/DM-ML/Assignment 3 Knn Algorithm/prostate_cancer (1).csv",stringsAsFactors = FALSE) 
+# This command is used to see whether the data is structured or not
+str(prc)
+
+
+## Step 2 - Preparing and Exploring Data
+
+#This command will remove the first variable "ID" from the dataset. We are removing it, since it's of no usage in prediction and implementing the algorithm.
+prc <- prc[-1]
+head(prc)
+
+#This command helps to get the number of the patients involved with its specific class.
+table(prc$diagnosis_result)
+prc$diagnosis <- factor(prc$diagnosis_result, levels = c("B", "M"), labels = c("Benign", "Malignant"))
+table(prc$diagnosis)
+# This command using round function will give the result in the percentage form rounded of to 1 decimal place( and so it’s digits = 1)
+round(prop.table(table(prc$diagnosis)) * 100, digits = 1)
+
+# The scale used for each numeric feature variable are different and it might impact the analyses.
+# Therefore, implemened the for loop to normalize the data in a required equal form with its values scaled between o to 1. 
+## Normalizing numeric data
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x))) }
+
+# The feature variables are from 2 to 9 columns in a dataframe.
+# The use of lapply() function in a command will normalize each numeric feature in the dataframe. 
+# The command will fianlly saves the result in prc_n dataframe by using as.data.frame() function.
+prc_n <- as.data.frame(lapply(prc[2:9], normalize))
+#This command is to ensure the numeric feature variables are normalized by trying on its one variable.
+summary(prc_n$radius)
+
+## Creating training and test data set
+
+#This command will use the same dataset, every time we implement our whole algorithm. 
+set.seed(101)
+#This commands splits the prc_n dataset in 65/35 proportion its feature variables in train and test dataset.
+prc_train <- prc_n[1:65,]
+prc_test <- prc_n[66:100,]
+# This command splits the prc dataset in 65/35 proportion its classes in train and test labels dataset.
+prc_train_labels <- prc[1:65, 1]
+prc_test_labels <- prc[66:100, 1] 
+
+
+## Step 3 - Training a model on data
+
+# In order to implement KNN, I've installed "class" package and called it with library() function.
+library(class)
+# This command uses the knn function and with k value "10", predictions are being implemented in the variable "prc_test_pred". The value of K is veing chosen by taking the sq. root of the total cases in the prc dataset.
+prc_test_pred <- knn(train = prc_train, test = prc_test,cl = prc_train_labels, k=10)
+
+
+## Step 4 - Evaluate the model performance
+
+# In order to evaluate the model, I've used "gmodels" package and called it with library() function.
+library(gmodels)
+#This Crosstable function will evaluate the performance of the model. 
+CrossTable(x = prc_test_labels, y = prc_test_pred, prop.chisq = FALSE)
+
+
+
+
+#### (4) KNN-Algorithm using "caret" package for Prostate Cancer Detection
+
+#The dataset consists of 100 observations and 10 variables including 1 ID variable, 1 Class variable and 8 features variable
+
+# This command imports the required data set and saves it to the prc data frame & 
+# stringsAsFactors will help to convert every character vector to a factor wherever it makes sense.
+Fdata <-  read.csv("C:/Users/hshah/Desktop/DM-ML/Assignment 3 Knn Algorithm/prostate_cancer (1).csv",stringsAsFactors = FALSE) 
+# This command is used to see whether the data is structured or not
+str(Fdata)
+
+# In order to execute the alorithm, I've installed and imported the following libraries in r.
+library(caret)
+library(ISLR)
+library(dplyr)
+
+## TRAIN/TEST Dataset split execution code.
+
+Traindata <- Fdata[,3:10]
+glimpse(Traindata)
+TrainClasses <- Fdata[,2]
+glimpse(TrainClasses)
+
+set.seed(109)
+#Spliting data as training and test set. Using createDataPartition() function from caret
+partition <- createDataPartition(y = Fdata$diagnosis_result,p = 0.75,list = FALSE)
+training <- Fdata[partition,]
+glimpse(training)
+Traindata <- training[,3:10]
+glimpse(Traindata)
+TrainClasess <- training[,2]
+glimpse(TrainClasess)
+
+testing <-  Fdata[-partition,]
+glimpse(testing)
+TestData <- testing[,3:10]
+glimpse(TestData)
+TestClasses <- testing[,2]
+glimpse(TestClasses)
+
+#Checking distibution in origanal data and partitioned data
+prop.table(table(TrainClasess)) * 100
+prop.table(table(TestClasses)) * 100
+prop.table(table(Fdata$diagnosis_result)) * 100
+
+
+## Training and Train Control - KNN 
+#Used train() function in order to use KNN method to this Train data and Train Classes
+knnfit0 <- train(Traindata, TrainClasess, method = "knn")
+TrainClasess
+
+set.seed(509)
+ctrl <- trainControl(method="repeatedcv",repeats = 3) 
+knnFit <- train(Traindata, TrainClasess, method = "knn", trControl = ctrl, preProcess = c("center","scale"), tuneLength = 20)
+
+#Output of kNN fit
+knnFit
+
+#Plotting yields Number of Neighbours Vs accuracy (based on repeated cross validation)
+plot(knnFit)
+
+#Used predict() function of the caret package to execute the prediction on the test dataset classes with its output knnfit.
+knnPredict <- predict(knnFit,newdata = TestData )
+
+#Get the confusion matrix to see accuracy value and other parameter values
+confusionMatrix(knnPredict, TestClasses)
+str(knnPredict)
+table(knnPredict)
+table(TestClasses)
+str(TestClasses)
+mean(knnPredict == TestClasses)
+
+
+## Now verifying 2 class Summary Function - KNN - Training and Train Control
+
+ctrl1 <- trainControl(method="repeatedcv",repeats = 3,classProbs=TRUE,summaryFunction = twoClassSummary)
+knnFit1 <- train(Traindata, TrainClasess, method = "knn", trControl = ctrl1, preProcess = c("center","scale"), tuneLength = 20)
+
+knnFit1
+
+plot(knnFit1, print.thres = 0.5, type="S")
+
+knnPredict1 <- predict(knnFit1,newdata = TestData )
+
+#Get the confusion matrix to see accuracy value and other parameter values
+confusionMatrix(knnPredict1, TestClasses )
+
+mean(knnPredict1 == TestClasses)
+
+
+
+
+## (5) Determine the accuracy of both algorithms used above with "class" and "caret" package.
+
+# I've used "ConfusionMatrix" function of the caret package in order to compare the accuracy of both the algorithms, that are implemented distinctly for KNN-Algorithm using distinct packages i.e. class & caret.
+
+
+# This command shows that I've used "caret" package in order to evaluate the model with its specific accuracy. using its ConfusionMatrix() function. This evaluation is done for the algorithm umplemented using "class" package of 3rd question.
+library(caret)
+confusionMatrix(prc_test_pred, prc_test_labels)
+
+
+# This command shows that I've used "caret" package in order to evaluate the model with its specific accuracy. using its ConfusionMatrix() function. This evaluation is done for the algorithm umplemented using "caret" package of 4th question.
+Accuracy_using_caretAlgo <- confusionMatrix(knnPredict, TestClasses)
+Accuarcy_using_caretAlgo_1 <- confusionMatrix(knnPredict1, TestClasses)
+
+# The confusion matrix for this algorithm is already being executed in the 4th question.
+# Hence need to refer that, since it won't get created second time in the same chunk.
+
+## The accuuracy evaluation for the KNN-Alpgorithm implemented using "class" package in 3rd question. is 62.86%.
+## The accuuracy evaluation for the KNN-Alpgorithm implemented using "caret" package in 4th question. is 87.50%.
+
+
+```
+
+
+
