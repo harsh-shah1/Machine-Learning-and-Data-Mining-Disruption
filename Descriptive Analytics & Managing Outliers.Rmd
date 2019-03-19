@@ -1,0 +1,255 @@
+---
+title: "Assignment-2"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+#HARSH SHAH (001273963)
+#DA5030 | 35664 | Intro Data Mining & Machine Learning | SEC 01 | Spring 2018
+#Assignment: 2
+
+
+### (1) Determine which states are outliers in terms of assaults. Outliers, for the sake of this question, are defined as values that are more than 1.5 standard deviations from the mean.
+
+datasets::USArrests
+summary(USArrests)
+summary(USArrests$Assault)
+
+Assault <- USArrests$Assault
+
+Mean <- mean(Assault)
+StdDev <- sd(Assault)
+
+Z <- Mean-Assault
+
+Z_score <- Z/StdDev
+Z_score
+
+mean(Z_score)
+
+Z_score <- abs(Z_score)
+Z_score
+mean(Z_score)
+outliers <- Z_score[which(Z_score>1.5)]
+outliers
+outliers <- which(Z_score>1.5)
+outliers
+Assault[outliers]
+
+# Therefore, the states with outliers are Florida, Maryland, North Dakota and North Carolina 
+
+
+
+### (2) For the same dataset as in (1), is there a correlation between murder and assault, i.e., as one goes up, does the other statistic as well? Comment on the strength of the correlation. Calculate the Pearson coefficient of correlation in R.
+
+plot(USArrests$Murder, USArrests$Assault) 
+
+cor(USArrests$Murder, USArrests$Assault, method = "pearson", use = "complete.obs")
+cor.test(USArrests$Murder, USArrests$Assault, method = "pearson")
+
+# Alternate method for pearson coefficient correlation using HMISC library
+library(Hmisc)
+rcorr(USArrests$Murder, USArrests$Assault, type = "pearson")
+
+
+
+### (3 & 4) for simple moving average in terms of forecasting next period and finding mean squared error for the model
+
+mobile_phone_growth <- read.csv("C:/Users/hshah/Desktop/DM-ML/Assignment 2/Raw Data Mobile Phone Growth (Brazil) - Sheet1.csv")
+mobile_phone_growth
+
+##simple 3 year moving average
+
+nrow(mobile_phone_growth)
+n <- nrow(mobile_phone_growth)
+n
+last3 <- mobile_phone_growth[n:(n-2), 2]
+last3
+ft_smovavg_2017 <- mean(last3)
+ft_smovavg_2017
+
+# Hence, forecast for 2017 is ft_smovavg for simple moving average
+
+
+#LOOP FOR Simple moving average in order to find mean squared error
+mobile_phone_growth$ft_sma<- 0
+mobile_phone_growth$error_sma <- 0
+mobile_phone_growth[1,3] <- mobile_phone_growth[1,2]
+mobile_phone_growth[2,3] <- mobile_phone_growth[2,2]
+mobile_phone_growth[3,3] <- mobile_phone_growth[3,2]
+for (i in 4:nrow(mobile_phone_growth)) {
+  mobile_phone_growth$ft_sma[i] <- mean(mobile_phone_growth$ft_sma[(i-3):(i-1)])
+  mobile_phone_growth$error_sma[i] <- mobile_phone_growth$Subscribers[i] - mobile_phone_growth$ft_sma[i]
+}
+mobile_phone_growth
+
+a <- abs(mobile_phone_growth$error_sma)
+a
+b <- mean(a^2)
+b
+
+## Mean squared error for simple moving average is b
+
+
+
+#### (3 & 4) for weighted moving average in terms of forecasting next period and finding mean squared error for the model
+
+##3 year weighted moving average
+##chosse 4,1,1
+
+phone_growth_wma <- read.csv("C:/Users/hshah/Desktop/DM-ML/Assignment 2/Raw Data Mobile Phone Growth (Brazil) - Sheet1.csv")
+phone_growth_wma
+last3
+weights <- c(4,1,1)
+sweights <- weights*last3
+sweights
+ft_wma_2017 <- sum(sweights)/sum(weights)
+ft_wma_2017
+
+## Hence, forecast for 2017 for weighted moving average is ft_wma_2017
+
+
+# LOOP FOR Weighted moving average in order to find mean squared error
+phone_growth_wma$ft <- 0
+phone_growth_wma$error <- 0
+head(phone_growth_wma)
+phone_growth_wma[1,3] <- phone_growth_wma[1,2]
+phone_growth_wma[2,3] <- phone_growth_wma[2,2]
+phone_growth_wma[3,3] <- phone_growth_wma[3,2]
+for (i in 4:nrow(phone_growth_wma)) {
+  phone_growth_wma$ft[i] <- sum(weights*(phone_growth_wma$ft[(i-3):(i-1)]))/sum(weights)
+  phone_growth_wma$error[i] <- phone_growth_wma$Subscribers[i]-phone_growth_wma$ft[i]
+}
+(phone_growth_wma)
+
+c <- abs(phone_growth_wma$error)
+c
+d <- mean(c^2) 
+d
+
+## Mean squared error for weighted moving average is d
+
+
+
+#### (3 & 4) for exponential smoothing in terms of forecasting next period and finding mean squared error for the model
+
+phone_growth_es <- read.csv("C:/Users/hshah/Desktop/DM-ML/Assignment 2/Raw Data Mobile Phone Growth (Brazil) - Sheet1.csv")
+phone_growth_es
+
+##alpha = 0.2
+phone_growth_es$ft <- 0
+phone_growth_es$error <- 0
+head(phone_growth_es)
+
+phone_growth_es$ft[1] <- phone_growth_es[1,2]
+head(phone_growth_es)
+
+## f(t) = f(t-1) + a*E(t-1)
+
+a1 <- 0.2
+phone_growth_es$ft[2] <- phone_growth_es$ft[1] + a1*phone_growth_es$error[1]
+phone_growth_es$error[2] <- phone_growth_es[2,2] - phone_growth_es$ft[2]
+
+head(phone_growth_es)
+
+##algorithm/loop for upto n rows in exponential smoothing
+for (i in 2:nrow(phone_growth_es)) {
+  phone_growth_es$ft[i] <- phone_growth_es$ft[i-1] + a1*phone_growth_es$error[i-1]
+  phone_growth_es$error[i] <- phone_growth_es$Subscribers[i] - phone_growth_es$ft[i]
+}
+phone_growth_es
+n<-nrow(phone_growth_es)
+n
+ft_es_2017 <- phone_growth_es$ft[n] + a1*phone_growth_es$error[n]
+ft_es_2017
+
+## Hence, forecast for 2017 is ft.es_2017 with exponential smoothing
+
+summary(phone_growth_es$ft)
+
+e <- abs(phone_growth_es$error)
+e
+f <- mean(e^2) 
+f
+
+## Mean squared error for exponential smoothing is f
+  
+
+
+#### (3 & 4) for Linear Regression trend line in terms of forecasting next period and finding mean squared error
+
+## Linear Regression trend line
+
+phone_growth <- read.csv("C:/Users/hshah/Desktop/DM-ML/Assignment 2/Raw Data Mobile Phone Growth (Brazil) - Sheet1.csv")
+phone_growth
+
+library(ggplot2)
+ggplot(phone_growth, aes(phone_growth$Year, phone_growth$Subscribers)) + geom_line()
+ggplot(phone_growth, aes(phone_growth$Year, phone_growth$Subscribers)) + geom_line()
+model1 <- lm(phone_growth$Subscribers ~ phone_growth$Year, data = phone_growth)
+summary(model1)
+print(model1)
+plot(model1)
+# Forecast.subscriber = -3.666e+10 + 1.828e+07(phone_growth$Year)
+# Ft = 1.828e+07*(ft)-3.666e+10
+F.s1 <- (1.828e+07)*(2017)-3.666e+10
+F.s1
+
+## Hence forecast for 2017 with linear regression is F.s1
+
+
+## Loop for mean squared error FOR Linear regression trend line
+phone_growth <- read.csv("C:/Users/hshah/Desktop/DM-ML/Assignment 2/Raw Data Mobile Phone Growth (Brazil) - Sheet1.csv")
+phone_growth
+phone_growth$future <- 0
+phone_growth$error <- 0
+head(phone_growth)
+nrow(phone_growth)
+for (i in 1:nrow(phone_growth)) {
+  phone_growth$future[i] <- 1.828e+07*phone_growth$Year[i]-3.666e+10
+  phone_growth$error[i] <- abs(phone_growth[i,2]-phone_growth$future[i])
+}
+phone_growth
+
+g <- abs(phone_growth$error)
+g
+h <- mean(g^2) 
+h
+
+## Mean squared error for linear regression is h
+
+
+
+## (5) Which model has the smallest mean squared error (MSE)?
+
+models <- c("simple mov avg"=7.439612e+15, "weighted mov avg"=7.601089e+15, "exponential smoothing"=3.166964e+15, "linear regression line"=1.773756e+14)
+models
+min(models)
+which.min(models)
+
+## Hence, mean squared error(MSE) for linear regression trend line is the least in value
+
+
+
+##6 Calculate a weighted average forecast by averaging out the three forecasts calculated in (3) with the following weights: 3 for trend line, 2 for exponential smoothing, 1 for weighted moving average.
+
+weights1 <- c(3,2,1)
+weights1
+df.wma <- c(F.s1, ft_es_2017, ft_wma_2017)
+df.wma
+wma <- weights1*df.wma
+wma
+ft_wma <- sum(wma)/sum(weights1)
+ft_wma
+
+## Hence, forecast by averaging out three forecast in a weighted moving average of 3, 2, 1. is ft_wma 
+
+```
+  
