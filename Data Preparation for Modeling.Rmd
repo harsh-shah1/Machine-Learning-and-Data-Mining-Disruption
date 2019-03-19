@@ -1,0 +1,109 @@
+---
+title: "Assignment-1"
+output: html_document
+---
+
+```{r}
+#HARSH SHAH (001273963)
+#DA5030 | 35664 | Intro Data Mining & Machine Learning | SEC 01 | Spring 2018
+#Assignment: 1 
+
+
+#(1)Locate the dataset and load data into R:
+customertxndata <- read.csv("C:/Users/hshah/Desktop/DM-ML/customertxndata.csv")
+str(customertxndata)
+
+
+
+#(2)Calculate the following summative statistics: Used "na.rm = TRUE" function to exclude any missing values in columns
+
+#Total number of cases:
+nrow(customertxndata)
+
+#Mean number of Visits:
+mean(customertxndata$Visits, na.rm = TRUE)
+
+#Median Revenue:
+median(customertxndata$Revenue, na.rm = TRUE)
+
+#Maximum and Minimum number of Transactions:
+max(customertxndata$Transactions, na.rm = TRUE)
+min(customertxndata$Transactions, na.rm = TRUE)
+
+#Most commonly used Operating system: "Android" is most commonly used operating system with "16028" users
+table(customertxndata$OS)
+
+
+
+#(3)Create scatter plot of number of visits(x-axis) versus revenue(y-axis):
+Visits <- customertxndata$Visits
+Revenue <- customertxndata$Revenue
+plot(Visits, Revenue)
+
+#Most of the points are between 0 and 500, with minor outliers. There are about dozen or so points between 1000 and 2000. The distribution of the points are comparable in terms of location and spread.  
+
+
+
+#(4)Which columns have missing data?: "Transactions" and "Gender" are missing data columns
+which(is.na(customertxndata$Visits))
+which(is.na(customertxndata$Transactions))
+which(is.na(customertxndata$OS))
+which(is.na(customertxndata$Gender))
+which(is.na(customertxndata$Revenue))
+
+#Alternate way to find missing data columns is:
+summary(customertxndata)
+
+
+#How did you recognize missing data?:
+#There are two ways to recognize them simply in R: 
+#(a) By using function "summary()", which indiactes columns which have missing values by "NA's"(number of missing records)
+#(b) By the above executed code and its results. The variable which doesn't have missing values results into its data type with zero records while one with missing values results into records which consists of the same. 
+
+
+#How would you impute missing values?:
+#There are many imputation methods that can be implemented in order to prepare the dataset, but the most consistent method to impute the missing values are by using predictive model(In this case, I used both KNN imputation method model &  Average imputation methods with customertxndata1 and customertxndata2 dataset respectively as mentioned in a code. All the time we are required to consider the amount and quality of the data with some required characteristics in it(like outliers, etc.) in order to use imputation methods.
+                                                                                                                               
+                                                                                                                               
+
+#(5)Impute missing transaction and gender values:
+#KNN Imputation method: Total of all 1800 transactions records and 5400 gender records are imputed by KNN imputation as shown in above results of summary of customertxndata1(Dataset with imputed values).
+#KNN Imputation model (i.e. predictive model) gives more consistent result in compared to other imputation method like deletion, impute by average; with consideration of different characteristics of dataset.Extra columns could be ingnored by subseting.
+library(VIM)
+customertxndata1 <- kNN(customertxndata, variable = c("Gender", "Transactions"), k = 5)
+summary(customertxndata1)
+customertxndata1 <- subset(customertxndata1, select = Visits:Revenue)
+head(customertxndata1)
+
+#Alternate method:
+#Average Imputation method
+customertxndata2 <- customertxndata
+customertxndata2$Transactions[which(is.na(customertxndata2$Transactions))] <- mean(customertxndata2$Transactions, na.rm = TRUE)
+customertxndata2$Gender[which(is.na(customertxndata2$Gender))] <- max(names(sort(table(customertxndata2$Gender))), 1)
+
+
+
+#(6)Split the data set into two equally sized data sets where one can be used for training a model and the other for validation. Take every odd numbered case and add them to the training data set and every even numbered case and add them to the validation data set, i.e., row 1, 3, 5, 7, etc. are training data while rows 2, 4, 6, etc. are validation data:
+Training_dataset <- customertxndata1[seq(1,22799,2), ]
+Validation_dataset <- customertxndata1[seq(2,22800,2), ]
+
+
+
+#(7)Calculate the mean revenue for the training and the validation data sets and compare them. Comment on the difference:
+mean(Training_dataset$Revenue, na.rm = TRUE)
+mean(Validation_dataset$Revenue, na.rm = TRUE)
+
+#The mean difference between both the training and validation dataset is approximately 11. It seems that the difference is more and could prove to overfit the predictive model of the training dataset.  
+#Also from the mean difference we can't assume the relevancy of the model of the training dataset since it depends on that models results which gets displayed and further comparing it with the test dataset could point us down to the decision of overfitting, underfitting or exact fitting of the model. 
+
+
+
+#(8)Find at least one package that has functions for creating training and validation data subsets and show how to use them:
+library(caTools)
+set.seed(111)
+sample = sample.split(customertxndata1$Visits, SplitRatio = 0.70)
+train = subset(customertxndata1, sample == TRUE)
+test = subset(customertxndata1, sample == FALSE)
+
+
+```
