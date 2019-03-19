@@ -1,0 +1,174 @@
+---
+title: 'Assignment-5: Problem 2,3 & 4'
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+
+#HARSH SHAH (001273963)
+#DA5030 | 35664 | Intro Data Mining & Machine Learning | SEC 01 | Spring 2018
+#Assignment: 5 
+
+```
+
+# Problem 2:
+```{r}
+# Build and R Notebook of the poisonous mushrooms example using rule learners. Show each step and add appropriate documentation.
+
+```
+
+
+# Collection of the Data
+```{r}
+# Import and read the csv file
+mushrooms <- read.csv("C:/Users/hshah/Desktop/DM-ML/Assignment 5 Decision Trees and Rules Classification/mushrooms.csv")
+
+# To familiarize with the structure of the data, used str() function
+str(mushrooms)
+
+```
+
+# Exploration of the Data 
+```{r}
+# Analyzing the column veil_type since it seems to be classified with only one class "partial". Besides, it does not vary accross the samples of the data and doesn't provide any meaning information that impact the prediction. 
+table(mushrooms$veil_type) 
+
+# Hence, dropping the fr=eature variable by assigning NULL to it. 
+mushrooms$veil_type <- NULL
+
+# Analyzing the target variable which is going to be classified
+table(mushrooms$type)
+
+```
+
+# Training a model on the Data
+```{r}
+# Loading "RWeka" package, after prior installation.
+library(RWeka)
+
+#Used OneR() function which implements the whole 1R algorithm and trains using by passing the target variable against all the feature variables and the dataset to be used. "." means every feature variable present in the dataset. Since OneR() requires all the feature variables while constructing its rules to predict the types of class.
+mushroom_1R <- OneR(mushrooms$type ~ ., data = mushrooms)
+
+# Examining the rules it created by passing the name of variable we trained.
+mushroom_1R
+
+```
+
+# Evaluating the model performance
+```{r}
+# summary() will provide all the details about the classifier. Confusion matrix is being entailed for the variable that used OneR() function to train the model algorithm
+summary(mushroom_1R)
+
+```
+
+# Improving model performance
+```{r}
+# Using the JRIP() function to implement more sophisticated rule learner classification
+mushroom_JRIP <- JRip(mushrooms$type ~ ., data = mushrooms)
+
+# To examine the details of the classifier
+mushroom_JRIP
+
+```
+# Problem 3: 
+```{r}
+# So far we have explored four different approaches to classification: kNN, Naive Bayes, C5.0 Decision Trees, and RIPPER Rules. Comment on the differences of the algorithms and when each is generally used. Provide examples of when they work well and when they do not work well. Add your comments to your R Notebook. Be specific and explicit; however, no code examples are needed.
+
+```
+
+
+# kNN Classification
+```{r}
+# k-Nearest Neighbors is the supervised machine learning algorithm used to predict the new cases in terms of "Classification" and "Regression". 
+
+#kNN is generally used when all the feature variables (i.e. predictors) are continuous variable (i.e numeric in datatype). Since it is used based on the concept of evaluating the result or prediction on the basis of the specified value of k. Hence, the techniques used to derive to the output of, which are the cases whose feature variables are probably the closest are using of the euclidean distance, manhattan distance, and other distance calculating functions (used as per the requirements of the classifier). That inference will ensure the prediction classification and prediction regression using simple statistics of mode and mean respectively of the k closest neighbors. k chosen is usually the square root of the number of records of the whole dataset which will apparently ignore the overfit/underfit of the model
+
+# Besides, it is highly competitive in terms of its prediction power and calculation time. Also, it is easy to interpret with its implementations towards building the algorithm.
+
+# It works really well with its prediction output when all the feature variables of training data is completely normalized and has been in specific range scale as per its capacity to get normalize, but it is one of the important factor to take into consideration while before implementing the kNN algorithm.This will assure the prediction to be highly competitive since it will not influence the decision of the algorithm. Consquently, it becomes clear that the algorithm doesn't work well if implemented without evaluating the types of feature variables, or without normalizing the dataset and choosing the random value of k which could eventually result into the overfitted/underfitted model.
+
+```
+
+# Naive Bayes Classification
+```{r}
+# Naive Bayes classification is also the supervised machine learning algorithm used to predict the new cases in terms of "classification"
+
+#Naive Bayes classification is one of the best algorithms used to implement the text classification/sentimental analysis as compared to the other algorithms. The power of this algorithm is based on the Bayes' theorm which eventually works on the posterior probability classification. It outperforms the classifiction even when working with large datasets 
+
+# Also performs well with both the continuous and categorical variables, the continuous variable must be distributed normally though, in order to execute the implementation successfully without any bad influence in the prediction classifier.
+
+# It has pros and cons and is proved to be its flip side and is always being decided and changes as per the changes in the dataset. Well, it performs better only when the data has all the independent feature variable because it priorly assumes all the feature variables to be independent while on the other side, on the real world problem it's next to impossible to believe that the data would be consisting all the feature variables as an independent. Hnece can't avoid not using it in that cases. Besides, in order to implement it with right class prediction it has to be assured with using the laplace estimation (i.e. corrects and adds up with its defined value to all the cells to ensure no zero frequency while implementing probability vlassifiation and it will eventually results into better prediction and hence apparently it not seems to be influencing the decision).
+
+```
+ 
+# C5.0 Algorithm - Decision trees Classification
+```{r}
+# C5.0 Algorithm is one of the most well known implementations of decision trees (Follows Divide-and-conquer rule classification). Well, there are many advantages and limitations of this algorithm in a real practice that are consdered as a factor and executed based on the situation. Since it performs well on most of the problems and better dealing with numeric as well as nominal features along with the missing data values. There are many limitation against it, which are considered as relatively minor and could be avoided. The algorithm might builds the model that doesn't work well with other training datasets due to overfit/underfit of the model; because it tries to build a model which might gives the highest accuracy for that specific dataset but not for others.
+
+# Besides, minor changes in the dataset might result into the bigger changes in the decision logic; which proves to be risky to rely on that kind of model in a real world where this things keeps on happening and we had to be concise with building a model which runs robustly in with considering these changes.
+
+# The way this algorithm works is enormous, since it uses the concept of information gain which eventually helps the model to build the branches (i.e. which feature variable should be taken first in consideration in order to result high accuracy) and entropy in terms of spliting the levels and it chooses the best split whenever required with respect to the feature variables.
+
+# C5.0 algorithm is best in its own limitation by provisioning the pruning methodology (i.e. pre-pruning, post-pruning) which requires to be passed as an argument and helps building the model with some constraints and that apparently gains up the perfection of it and outputs high accuracy. On top of that, also try to identify the model, its sustaining cost at the result of giving as much error in a model which eventually results high accurate predictions in regard to that considerations. 
+
+```
+
+# RIPPER rules - Rules-Decision trees Clssification
+```{r}
+# RIPPER (Repeated Incremental Pruning to Produce Error Reduction). The name itself says it all. This algorithm has many advantages and limitations against it same as the C5.0. Well, this algorithm works on a very simple but organized format.
+
+# It is a three step process as in it grows the model, performs pruning on it and then optimizing the output based on requirement. The first two parts kepps on running and building until the perfectly classified subset of data is being identified or until the algorithm runs out of attributes to split. 
+
+# It is more complex model than other decision trees implementation models. Similar to the C5.0 algorithm, this model also uses the information gain to identify the next splitting attribute. The methid in which specific rules anre being passed it stops reducing the entropy and this entireset rules are optimized which eventually makes the model complex. 
+
+# Besides, in its limitation where it doesn't work well is while implementing it with numeric feature variables. But on the other, good enough and efficient working with noisy dataset. 
+
+```
+
+
+# Problem 4:
+```{r}
+#Much of our focus so far has been on building a single model that is most accurate. In practice, data scientists often construct multiple models and then combine them into a single prediction model. This is referred to as a model assemble. Two common techniques for assembling assemble models are boosting and bagging. Do some research and define what model ensembles are, why they are important, and how boosting and bagging function in the construction of assemble models. Be detailed and provide references to your research.
+```
+
+# Answer:
+```{r}
+# Model Ensembles: It is generally referred to as Ensemble learning while training the model to predict the output. Simply, in genral terms several, individual models come together and bring forth the model that is more accurate c0mapred to the predictions of the individual learning models. 
+
+# Example: Let's assume a dataset with several feature variables and lebels; using that as an input we train several machine learning algorithmic models like Decision trees, Logistic regression and Support Vector machines and that individually learning models gives an accuracy outputs of 75%, 60%, and 655 respectively. Hence, we cannot rely on either of the models with such opted accuracy and therefore we decide to improve the accuracy of the model that results in a better predictions. Which eventually comes by implementing the multiple individual learning models together and get the improved accurate predictions. To be specific, in terms of "classification" it takes voting method as an output criteria while in terms of "regression" it takes mean as its output criteria with respect to the specific changes required with the feature variable's parameters and lables to result continuous target regression value.
+
+# The reason that why are they important and beneficial to use are:
+# 1. Ensemble learning models are better at giving high prediction accuracy apparantly giving low error rates. Which proves that it is beneficial to use only when its worth extra training (i.e when it gives more accuracy than single learning model)
+# 2. It gives the better consistency while avoiding overfitting and hence to be used in most such cases.
+# 3. Reduces bias and variamce errors and hence beneficial to deploy. 
+# 4. More importantly, it can be used for classification as well as regression.
+
+
+# Bagging (Bootstrap Aggregating): In general terms, various models are built in parallel on various samples and then the various models of the same implemented algorithms vote to give the the final model, hence the prediction. To be specific, multiple models of the same learning algorithm trained with the subsets of dataset which is randomly picked from the training dataset and gets trained with their specific model and hence finally evaluates or aggregates the learning model in order to result final model with highly accurate predictions.
+
+# Function: It has a dataset which is being split into training (size = n) and testing dataset.A training dataset is being selected randomly as a datapoints(i.e repetitions allowed) and put into the bags. To make it simple, it works on training and validation method as we executes it generally, but in a model ensemble bagging method, it tries to create randomly selected training datasets and learn the model against the validation dataset, and this cycle should be repeated until the selected point and on various subsets of the training and validation dataset it eventually gives prediction with highest number of votes (for classification) or using mean (for regression).
+
+
+
+# Boosting: In general terms, the models are build in series; where in each successive model, the weights are adjusted based on the learning of previous model. 
+
+# Function: It has the dataset which gets partitioned with training and validation dataset and then a model is being trained and then will keep repiting the cycle of testing the training model with the training dataset where it trains a model with the datapoints which are not being classified or being miclassified along with the rpitions of the datapoints in the next training of the model with the method of weighted adjusting on the previous learning models. This cyclecan be repeated as per the requirement but and tends to give high accuracy of prediction on the final trained model. 
+# But overfits the model in most cases. 
+
+
+
+
+# References:
+# 1. https://www.youtube.com/watch?v=m-S9Hojj1as
+# 2. https://www.youtube.com/watch?v=AiePAlZy_t8
+# 3. https://blog.statsbot.co/ensemble-learning-d1dcd548e936
+# 4. https://da5030.weebly.com/uploads/8/6/5/9/8659576/baggingboostingkelleher.pdf
+
+
+
+
+
+
+```

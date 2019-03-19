@@ -1,0 +1,160 @@
+---
+title: 'Assignment-5: Problem 1'
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+
+#HARSH SHAH (001273963)
+#DA5030 | 35664 | Intro Data Mining & Machine Learning | SEC 01 | Spring 2018
+#Assignment: 5 
+
+```
+
+# Problem 1: 
+```{r}
+# Build an R Notebook of the bank loan decision tree. Show each step and add appropriate documentation.
+
+```
+
+# Identyifying risky bank loans using C5.0 Decision trees algorithm/Credit approving model using C5.0 decision trees
+
+
+# Collection of the Data
+```{r}
+# Import and read the csv file
+credit <- read.csv("C:/Users/hshah/Desktop/DM-ML/Assignment 5 Decision Trees and Rules Classification/credit.csv")
+
+# To familiarize with the structure of the data, used str() function
+str(credit)
+
+```
+
+# Exploration of the Data
+```{r}
+# Analyzing some of the categorical feature variable that seems likely to impact on the prediction on default
+table(credit$checking_balance)
+table(credit$savings_balance)
+
+# Analyzing some numeric feature variables 
+summary(credit$months_loan_duration)
+summary(credit$amount)
+
+# Analyzing the classification type "default" of the data to ensure wheather the loan applicants repaid the loan or went into the default. Cells with "1" are "No"(i.e repaid the loan and went into sober), with "2" are "Yes" (i.e went into default as a defaulter(not repaid the loan))
+table(credit$default)
+
+# Transformed the datatype from numeric to factor, since C5.0 algorithm classfies based on the type and it should be in factor variable
+credit$default <- as.factor(credit$default)
+
+str(credit$default)
+
+```
+
+# Data Preparation - Creating Training and Testing Datasets
+```{r}
+# To ensure getting the same results of accuracy everytime we execute the implementation code, since it passes the same number of random numbers to work with that specified seed number (i.e 12345 in this case)
+set.seed(12345)
+
+# Created new variable which replaces the positions of normally distributed numbers (created using order() function and runif() for the amount of number to replace) with the credit dataset in order to work further with the splitting the dataset and predicting the outcome based on that training and testing dataset.
+credit_rand <- credit[order(runif(1000)), ]
+
+# Analyzing whether the feature variables are being created with exact statistics into the new dataframe.  
+summary(credit$amount)
+summary(credit_rand$amount)
+
+# To get an idea of the dataframe with its small subset 
+head(credit$amount)
+head(credit_rand$amount)
+
+# Partitioned the dataset in the ratio of 90%/10% considering the number of rows in an account (i.e 1000). This ratio seems to work well with this amount of data.
+credit_train <- credit_rand[1:900, ]
+credit_test <- credit_rand[901:1000, ]
+
+# Analyzing the proportion of the types that is going to be classified in both the training and testing dataset in comparision to the original dataset (i.e credit: having 70%0/30% ratio of proportion) which eventually signifies the use of it in further implementation of predictive model. 
+prop.table(table(credit_train$default))
+prop.table(table(credit_test$default))
+
+```
+
+# Creating/Training a model on the Data
+```{r}
+# Loading "C50" package, after prior installation.
+library(C50)
+
+# Use of "C5.0" Algorithm in the "C50" package will train or create the decision tree model 
+# The first parameter includes the traing=ing data excluding the target variable "default" since it is supposed to be passed in the second argument. On the basis of which C5.0 algorithm model the decision trees with respect to its feature variabels (i.e predictors) and rows (i.e samples) with its size to completely build the predictive model according to the dataset provided. 
+credit_model <- C5.0(credit_train[-17], credit_train$default)
+
+# Inthis case we have predictors=20, samples=900 and Tree size=27
+credit_model
+
+
+# To see the decisions, called the summary() function which will display whole decision tree with each of its braches and nodes at every predictors with considerations of impacts of sample. 
+summary(credit_model)
+#This function also provides the confusion matrix which got evaluated based on "Training the model" on the training dataset. 
+# In this case Error rate=14.1%
+# This error rate indicates that the model correctly classified all the samples except 127 of the 900 training instances and resulted into error rate.
+# This is where C5.0 algorithm overfits the model by getting adding with unwanted decision trees. It doesn't recognize where the model should stop building more decision trees where it doesn't seems to increase the accuracy. Hence, its important to evaluate the decision trees further with the test dataset
+
+```
+
+# Evaluating model performance
+```{r}
+# Predict() function will evaluate the model on the test dataset
+credit_pred <- predict(credit_model, credit_test)
+
+# Loading "gmodels" package, after prior installation.
+library(gmodels)
+
+# Crosstable() function will provide the matrix which specifies the actual and predicted values on the "default" class which eventually gives an accuracy of the model which got evaluated on the test dataset. prop.c nd prop.r removes the column and row percentages from the table.
+CrossTable(credit_test$default, credit_pred, prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE, dnn = c('actual default', 'predicted default'))
+# Error rate=25% means 75% are classified correctly. Besides it predicts 11/32 to be non defaulter inspite of which they are actually and hence it is considered as a very costly mistake and can't be afforded.Therefore the model requires to be improved.
+
+```
+
+# Improving model performance
+
+
+# Boosting the accuracy of the decision trees
+```{r}
+# The use of C5.0() function easily implement the boosting in terms of by passing the argument called "trials" which sets an upper limit to the algorithm and eventually algorithm will stop building the decision trees where it seems not improving the accuracy of the model. It doesn't recognize automatically that where does the model stops improving the accuracy of the output and therefore I've used "10" which has apparently become the de facto standard by the research and reduces the error rates by 25%
+credit_boost10<- C5.0(credit_train[-17], credit_train$default, trials = 10)
+credit_boost10                       
+summary(credit_boost10) 
+
+# I've taken an initiative and tries building the decision trees until 20 trials and it happened to give more accuracy than to by the 10 trials.
+credit_boost20<- C5.0(credit_train[-17], credit_train$default, trials = 20)
+credit_boost20                       
+summary(credit_boost20)
+
+# Used the predict() function to result into output of predictive model accuracy on the test dataset
+credit_boost_pred10 <- predict(credit_boost10, credit_test)
+CrossTable(credit_test$default, credit_boost_pred10, prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE, dnn = c('actual default', 'predict default'))
+
+
+# Used the predict() function to result into output of predictive model accuracy on the test dataset
+credit_boost_pred20 <- predict(credit_boost20, credit_test)
+CrossTable(credit_test$default, credit_boost_pred20, prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE, dnn = c('actual default', 'predict default'))
+
+```
+
+# Adding cost matrix associated with the possible errors. It specifies how many times more costly each error is, relative to any other.
+```{r}
+# The use of C5.0 algorithm also provides a costs argument to pass through which implies to be specifying how many times more costly theerror is in relation to the other
+error_cost <- matrix(c(0,1,4,0), nrow=2)
+error_cost
+
+# Implemented the C5.0 model algorithm
+credit_cost <- C5.0(credit_train[-17], credit_train$default, costs = error_cost)
+
+# Predict() function will evaluate the model on the test dataset
+credit_cost_pred <- predict(credit_cost, credit_test)
+
+# Creating the confusion matrix against the test dataset to resukt into the accuracy of the predictive model
+CrossTable(credit_test$default, credit_cost_pred, prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE, dnn=c('actual default', 'predicted default'))
+
+```
+
+
